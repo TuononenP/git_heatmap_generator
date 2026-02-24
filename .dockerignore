@@ -1,0 +1,13 @@
+**/*.swp
+**/*.swo
+.DS_Store
+.git
+.gitignore
+.vscode
+.idea
+bin/
+obj/
+out/
+nupkg/
+**/bin
+**/obj

@@ -69,6 +69,22 @@ If you prefer a standalone executable:
     *   **macOS/Linux**: Move the resulting binary to `/usr/local/bin` or add its folder to your `$PATH`.
     *   **Windows**: Add the folder containing the generated `.exe` to your System Environment Variables (PATH).
 
+
+### Option 3: Docker
+
+You can run the generator without having .NET installed locally using Docker.
+
+1.  **Build the image**:
+    ```bash
+    docker build -t git-heatmap-generator .
+    ```
+
+2.  **Run the container**:
+    You must mount your local repository and an output folder to the container.
+    ```bash
+    docker run -v /your/local/repo:/repo -v $(pwd):/out git-heatmap-generator --year 2025 --email user@mail.com --repo /repo --output /out
+    ```
+
 ## Usage
 
 
