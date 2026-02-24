@@ -2,6 +2,8 @@
 
 A C# .NET console application that generates a Git activity heatmap image (PNG) from a local Git repository.
 
+![Git Heatmap Example](example/heatmap_2022-2026_example.png)
+
 ## Features
 
 - Scans a local Git repository for commits by one or more users (matched by email).
