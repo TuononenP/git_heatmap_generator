@@ -1,4 +1,5 @@
 using git_heatmap_generator.Rendering;
+using git_heatmap_generator.Models;
 using SixLabors.ImageSharp;
 
 namespace git_heatmap_generator.Tests;
@@ -30,4 +31,29 @@ public class RendererTests
         // Note: exact week count might vary by calculation method, but 53 is standard for a full year grid.
         Assert.Equal(expectedWeeks, weeks);
     }
+
+    [Fact]
+    public void GetDefaultFileName_SingleYear_ReturnsCorrectName()
+    {
+        var years = new List<int> { 2025 };
+        var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Vertical);
+        Assert.Equal("heatmap_2025.png", fileName);
+    }
+
+    [Fact]
+    public void GetDefaultFileName_YearRange_ReturnsRangeName()
+    {
+        var years = new List<int> { 2022, 2023, 2024 };
+        var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Vertical);
+        Assert.Equal("heatmap_2022-2024.png", fileName);
+    }
+
+    [Fact]
+    public void GetDefaultFileName_HorizontalLayout_ReturnsHorizontalName()
+    {
+        var years = new List<int> { 2022, 2023 };
+        var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Horizontal);
+        Assert.Equal("heatmap_horizontal_2022-2023.png", fileName);
+    }
 }
+

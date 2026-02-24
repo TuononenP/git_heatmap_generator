@@ -89,4 +89,95 @@ public class ArgumentParserTests
         var result = ArgumentParser.Parse(args);
         Assert.Null(result);
     }
+
+    [Fact]
+    public void Parse_WithPullRequestsFlag_ReturnsIncludePullRequestsTrue()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--pull-requests" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.True(result.IncludePullRequests);
+    }
+
+    [Fact]
+    public void Parse_WithShortPrFlag_ReturnsIncludePullRequestsTrue()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-pr" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.True(result.IncludePullRequests);
+    }
+
+    [Fact]
+    public void Parse_WithSmartDash_NormalizesAndParses()
+    {
+        // Using em-dash (—) which macOS often auto-corrects to
+        string[] args = { "—year", "2025", "—email", "user@mail.com", "—repo", "/path" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Contains(2025, result.Years);
+        Assert.Contains("user@mail.com", result.Emails);
+        Assert.Equal("/path", result.RepositoryPath);
+    }
+
+    [Fact]
+    public void ParseYears_WithUnicodeEllipsis_ReturnsRange()
+    {
+        var result = ArgumentParser.ParseYears("2022\u20262024");
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Count);
+        Assert.Contains(2022, result);
+        Assert.Contains(2023, result);
+        Assert.Contains(2024, result);
+    }
+
+    [Fact]
+    public void Parse_LayoutSeparate_ReturnsLayoutSeparate()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--layout", "separate" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(HeatmapLayout.Separate, result.Layout);
+    }
+
+    [Fact]
+    public void Parse_HelpFlag_ReturnsShowHelpTrue()
+    {
+        string[] args = { "--help" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.True(result.ShowHelp);
+    }
+
+    [Fact]
+    public void ParseEmails_WithWhitespace_CleansAndFilters()
+    {
+        var result = ArgumentParser.ParseEmails(" a@b.com, ,  c@d.com ");
+        Assert.Equal(2, result.Count);
+        Assert.Equal("a@b.com", result[0]);
+        Assert.Equal("c@d.com", result[1]);
+    }
+
+    [Fact]
+    public void ParseYears_ReversedRange_ReturnsYearsInOrder()
+    {
+        var result = ArgumentParser.ParseYears("2024...2022");
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Count);
+        Assert.Equal(2022, result[0]);
+        Assert.Equal(2023, result[1]);
+        Assert.Equal(2024, result[2]);
+    }
+
+    [Fact]
+    public void Parse_DuplicateArguments_ReturnsDistinctLists()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-y", "2025", "-e", "USER@mail.com" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Single(result.Years);
+        Assert.Single(result.Emails);
+    }
 }
+
+
