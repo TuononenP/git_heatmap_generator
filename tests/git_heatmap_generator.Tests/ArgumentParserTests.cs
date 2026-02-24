@@ -1,0 +1,92 @@
+using git_heatmap_generator.Cli;
+using git_heatmap_generator.Models;
+
+namespace git_heatmap_generator.Tests;
+
+public class ArgumentParserTests
+{
+    [Fact]
+    public void ParseYears_SingleYear_ReturnsListWithOneYear()
+    {
+        var result = ArgumentParser.ParseYears("2025");
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal(2025, result[0]);
+    }
+
+    [Fact]
+    public void ParseYears_Range_ReturnsListWithMultipleYears()
+    {
+        var result = ArgumentParser.ParseYears("2022...2024");
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Count);
+        Assert.Contains(2022, result);
+        Assert.Contains(2023, result);
+        Assert.Contains(2024, result);
+    }
+
+    [Fact]
+    public void Parse_ValidArgs_ReturnsParsedArguments()
+    {
+        string[] args = { "2025", "user@example.com", "/path/to/repo" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Contains(2025, result.Years);
+        Assert.Contains("user@example.com", result.Emails);
+        Assert.Equal("/path/to/repo", result.RepositoryPath);
+        Assert.Equal(HeatmapLayout.Vertical, result.Layout);
+    }
+
+    [Fact]
+    public void Parse_HorizontalLayout_ReturnsLayoutHorizontal()
+    {
+        string[] args = { "2025", "user@example.com", "/path/to/repo", "-l", "horizontal" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(HeatmapLayout.Horizontal, result.Layout);
+    }
+
+    [Fact]
+    public void Parse_WithYearAndEmailFlags_ReturnsParsedArguments()
+    {
+        string[] args = { "--year", "2024", "--email", "test@mail.com", "/path" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Contains(2024, result.Years);
+        Assert.Contains("test@mail.com", result.Emails);
+        Assert.Equal("/path", result.RepositoryPath);
+    }
+
+    [Fact]
+    public void Parse_WithMultipleYearAndEmailFlags_AggregatesResults()
+    {
+        string[] args = { "-y", "2024", "-y", "2025", "-e", "a@b.com", "-e", "c@d.com", "/path" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Years.Count);
+        Assert.Contains(2024, result.Years);
+        Assert.Contains(2025, result.Years);
+        Assert.Equal(2, result.Emails.Count);
+        Assert.Contains("a@b.com", result.Emails);
+        Assert.Contains("c@d.com", result.Emails);
+    }
+
+    [Fact]
+    public void Parse_WithRepoFlag_ReturnsParsedArguments()
+    {
+        string[] args = { "--repo", "/custom/path", "2025", "user@mail.com" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal("/custom/path", result.RepositoryPath);
+        Assert.Contains(2025, result.Years);
+        Assert.Contains("user@mail.com", result.Emails);
+    }
+
+    [Fact]
+    public void Parse_MissingPath_ReturnsNull()
+    {
+        string[] args = { "-y", "2025", "-e", "user@mail.com" };
+        var result = ArgumentParser.Parse(args);
+        Assert.Null(result);
+    }
+}

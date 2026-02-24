@@ -1,0 +1,21 @@
+# Build results
+bin/
+obj/
+
+# IDE / Editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated heatmap images
+heatmap_*.png
+
+# Test repos
+test_repo/
