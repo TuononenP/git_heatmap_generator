@@ -31,6 +31,11 @@ This project relies on the following NuGet packages:
 - `SixLabors.ImageSharp.Drawing` - For rendering the heatmap image grid and shapes.
 - `SixLabors.Fonts` - For rendering text labels and titles onto the image.
 
+## Third-Party Licenses
+
+This project uses SixLabors.ImageSharp.Drawing and SixLabors.Fonts. While this project is Apache License Version 2.0, SixLabors.ImageSharp.Drawing and SixLabors.Fonts are governed by the Six Labors Split License.
+Commercial users of this project should review Six Labors' [licensing terms](https://github.com/SixLabors/ImageSharp/blob/main/LICENSE) to ensure compliance.
+
 ## Installation
 
 ### Option 1: Global .NET Tool (Recommended)
