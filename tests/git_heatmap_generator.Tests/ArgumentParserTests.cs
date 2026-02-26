@@ -253,6 +253,17 @@ public class ArgumentParserTests
         Assert.NotNull(result);
         Assert.Equal(ColorMode.Dark, result.Mode);
     }
+
+    [Fact]
+    public void Parse_WithCustomColors_ReturnsCustomColors()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--colors", "#111111,#222222,#333333,#444444" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(ColorTheme.Custom, result.Theme);
+        Assert.Equal(4, result.CustomColors.Count);
+        Assert.Equal("#111111", result.CustomColors[0]);
+    }
 }
 
 

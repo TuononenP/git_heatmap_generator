@@ -7,7 +7,8 @@ public enum ColorTheme
     Default,
     Blue,
     Red,
-    Purple
+    Purple,
+    Custom
 }
 
 public enum ColorMode
@@ -36,7 +37,7 @@ public record ColorScheme
         return Level4Color;
     }
 
-    public static ColorScheme GetTheme(ColorTheme theme, ColorMode mode = ColorMode.Dark)
+    public static ColorScheme GetTheme(ColorTheme theme, ColorMode mode = ColorMode.Dark, List<string>? customColors = null)
     {
         bool isLight = mode == ColorMode.Light;
         
@@ -70,6 +71,13 @@ public record ColorScheme
                 Level2Color = isLight ? Color.ParseHex("#a371f7") : Color.ParseHex("#5c2b97"),
                 Level3Color = isLight ? Color.ParseHex("#8250df") : Color.ParseHex("#8250df"),
                 Level4Color = isLight ? Color.ParseHex("#3c1762") : Color.ParseHex("#a371f7")
+            },
+            ColorTheme.Custom when customColors != null && customColors.Count >= 4 => scheme with
+            {
+                Level1Color = Color.ParseHex(customColors[0]),
+                Level2Color = Color.ParseHex(customColors[1]),
+                Level3Color = Color.ParseHex(customColors[2]),
+                Level4Color = Color.ParseHex(customColors[3])
             },
             _ => scheme with // Default (GitHub-style)
             {

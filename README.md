@@ -8,7 +8,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 
 - Scans one or **multiple local Git repositories** and aggregates the activity.
 - Supports a **single year** or a **year range** (e.g., `2022...2026`).
-- Supports different **color schemes** (e.g., Default, Blue, Red, Purple).
+- Supports different **color schemes** (e.g., Default, Blue, Red, Purple, Custom).
 - Supports **Light and Dark modes** for all color schemes.
 - Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
   - Multiple years are stacked vertically (newest on top) with year labels.
@@ -115,7 +115,8 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | `-o`, `--output <path>` | Output path or folder (e.g., `./out/test.png` or `./out/test.svg`). |
 | `-f`, `--format <type>` | Output format: `png` (default), `svg`. |
 | `-l`, `--layout <type>` | Layout for multi-year heatmaps: `vertical` (default), `horizontal`, or `separate`. |
-| `-s`, `--style <name>` | Color style: `default` (default), `blue`, `red`, `purple`. |
+| `-s`, `--style <name>` | Color style: `default` (default), `blue`, `red`, `purple`, `custom`. |
+| `-c`, `--colors <hex,...>` | Custom colors (4 comma-separated hex codes) when using `custom` style. |
 | `-m`, `--mode <type>` | Background mode: `dark` (default), `light`. |
 | `-pr`, `--pull-requests` | Include pull requests in the calculation. |
 | `-h`, `--help` | Show help message. |
@@ -191,6 +192,14 @@ dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome
 ```
 
 This generates a heatmap with a white background and light gray empty cells, suitable for light-themed documents.
+
+**Custom Color Scheme:**
+
+```bash
+dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome_project -- --colors "#1D334A,#284E76,#3369A1,#3E84CD"
+```
+
+This generates a heatmap using the four specified hex colors for the contribution levels. Note that providing the `--colors` flag automatically sets the style to `custom`.
 
 **Using explicit flags:**
 

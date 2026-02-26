@@ -17,6 +17,7 @@ public static class ArgumentParser
     private static readonly string[] FormatFlags = { "--format", "-f", "—format" };
     private static readonly string[] StyleFlags = { "--style", "-s", "—style" };
     private static readonly string[] ModeFlags = { "--mode", "-m", "—mode" };
+    private static readonly string[] CustomColorsFlags = { "--colors", "-c", "—colors" };
 
     /// <summary>
     /// Parses command-line arguments into a structured result.
@@ -87,6 +88,7 @@ public static class ArgumentParser
                     "blue" => ColorTheme.Blue,
                     "red" => ColorTheme.Red,
                     "purple" => ColorTheme.Purple,
+                    "custom" => ColorTheme.Custom,
                     _ => ColorTheme.Default
                 };
             }
@@ -94,6 +96,11 @@ public static class ArgumentParser
             {
                 string modeArg = args[++i].ToLower();
                 result.Mode = modeArg == "light" ? ColorMode.Light : ColorMode.Dark;
+            }
+            else if (CustomColorsFlags.Contains(arg) && i + 1 < args.Length)
+            {
+                result.CustomColors = ParseList(args[++i]);
+                result.Theme = ColorTheme.Custom;
             }
             else
             {
@@ -217,7 +224,8 @@ public static class ArgumentParser
         Console.WriteLine("  -o, --output <folder>    Output path or folder for the generated image (default: current directory)");
         Console.WriteLine("  -l, --layout <type>      Layout: vertical (default), horizontal, separate");
         Console.WriteLine("  -f, --format <type>      Output format: png (default), svg");
-        Console.WriteLine("  -s, --style <name>       Color style: default (default), blue, red, purple");
+        Console.WriteLine("  -s, --style <name>       Color style: default (default), blue, red, purple, custom");
+        Console.WriteLine("  -c, --colors <hex,...>   Custom colors (4 comma-separated hex codes)");
         Console.WriteLine("  -m, --mode <type>        Mode: dark (default), light");
         Console.WriteLine("  -pr, --pull-requests      Include pull requests in the calculation");
         Console.WriteLine("  -h, --help               Show this help message");

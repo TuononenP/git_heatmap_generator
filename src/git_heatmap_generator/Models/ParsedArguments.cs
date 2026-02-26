@@ -18,6 +18,5 @@ public class ParsedArguments
     public OutputFormat Format { get; set; } = OutputFormat.Png;
     public ColorTheme Theme { get; set; } = ColorTheme.Default;
     public ColorMode Mode { get; set; } = ColorMode.Dark;
+    public List<string> CustomColors { get; set; } = new();
 }
-
-
