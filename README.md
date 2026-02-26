@@ -11,6 +11,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 - Supports different **color schemes** (e.g., Default, Blue, Red, Purple, Custom).
 - Supports **Light and Dark modes** for all color schemes.
 - Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
+  - Supports a **3D style** for a premium, elevated look.
   - Multiple years are stacked vertically (newest on top) with year labels.
 - Includes textual metadata on the image:
   - User email and year/range as the title.
@@ -119,6 +120,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | `-c`, `--colors <hex,...>` | Custom colors (4 comma-separated hex codes) when using `custom` style. |
 | `-m`, `--mode <type>` | Background mode: `dark` (default), `light`. |
 | `-pr`, `--pull-requests` | Include pull requests in the calculation. |
+| `--3d` | Use a 3D elevated style for heatmap cells. |
 | `-h`, `--help` | Show help message. |
 
 ### Parameters
@@ -200,6 +202,14 @@ dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome
 ```
 
 This generates a heatmap using the four specified hex colors for the contribution levels. Note that providing the `--colors` flag automatically sets the style to `custom`.
+
+**3D Style:**
+
+```bash
+dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome_project -- --3d
+```
+
+This generates a heatmap with an elevated 3D effect on the cells, giving it a premium look.
 
 **Using explicit flags:**
 

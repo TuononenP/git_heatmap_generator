@@ -86,20 +86,20 @@ public static class HeatmapRenderer
     }
 
     public static string Generate(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false)
     {
         var colorScheme = ColorScheme.GetTheme(theme, mode, customColors);
         if (format == OutputFormat.Svg)
-            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme);
+            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D);
 
         if (layout == HeatmapLayout.Vertical)
-            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
+            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
         else
-            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
+            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
     }
 
     private static string GenerateVertical(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D)
     {
         int yearSectionHeight = MonthLabelHeight + YearGridHeight + YearGap;
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
@@ -113,7 +113,7 @@ public static class HeatmapRenderer
         using (Image<Rgba32> image = new Image<Rgba32>(width, height))
         {
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
-            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme);
+            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D);
 
             float gridLeft = Padding + LabelAreaWidth;
             float gridTopBase = Padding + TitleAreaHeight;
@@ -122,7 +122,7 @@ public static class HeatmapRenderer
             {
                 int year = sortedYears[yi];
                 float sectionTop = gridTopBase + yi * yearSectionHeight;
-                DrawYear(image, year, sectionTop, gridLeft, commitCounts, fontYear, fontLabel, colorScheme);
+                DrawYear(image, year, sectionTop, gridLeft, commitCounts, fontYear, fontLabel, colorScheme, use3D: use3D);
             }
 
             string finalPath = ResolveOutputPath(outputPathOrFolder, GetDefaultFileName(years, HeatmapLayout.Vertical));
@@ -132,7 +132,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateHorizontal(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D)
     {
         var sortedYears = years.OrderBy(y => y).ToList();
 
@@ -148,7 +148,7 @@ public static class HeatmapRenderer
         using (Image<Rgba32> image = new Image<Rgba32>(width, height))
         {
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
-            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme);
+            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D);
 
             float gridLeftBase = Padding + LabelAreaWidth;
             float gridTopBase = Padding + horizontalTitleArea;
@@ -159,7 +159,7 @@ public static class HeatmapRenderer
                 int year = sortedYears[yi];
                 int weeks = CalculateWeeksForYear(year);
                 
-                DrawYear(image, year, gridTopBase, currentGridLeft, commitCounts, fontYear, fontLabel, colorScheme, isHorizontal: true, isFirstYearInHorizontal: yi == 0);
+                DrawYear(image, year, gridTopBase, currentGridLeft, commitCounts, fontYear, fontLabel, colorScheme, isHorizontal: true, isFirstYearInHorizontal: yi == 0, use3D: use3D);
                 currentGridLeft += weeks * Step + yearGapX;
             }
 
@@ -170,7 +170,7 @@ public static class HeatmapRenderer
     }
 
     private static void DrawYear(Image<Rgba32> image, int year, float sectionTop, float gridLeft, 
-        Dictionary<DateTime, int> commitCounts, Font? fontYear, Font? fontLabel, ColorScheme colorScheme, bool isHorizontal = false, bool isFirstYearInHorizontal = false)
+        Dictionary<DateTime, int> commitCounts, Font? fontYear, Font? fontLabel, ColorScheme colorScheme, bool isHorizontal = false, bool isFirstYearInHorizontal = false, bool use3D = false)
     {
         float gridTop = sectionTop + MonthLabelHeight;
         DateTime startDate = new DateTime(year, 1, 1);
@@ -227,13 +227,46 @@ public static class HeatmapRenderer
 
             int count = commitCounts.GetValueOrDefault(currentDate, 0);
             Color cellColor = colorScheme.GetColorForCount(count);
-            var rect = new RectangleF(gridLeft + weekIndex * Step, gridTop + dayOfWeek * Step, CellSize, CellSize);
-            image.Mutate(ctx => ctx.Fill(cellColor, rect));
+            DrawCell(image, gridLeft + weekIndex * Step, gridTop + dayOfWeek * Step, CellSize, cellColor, use3D, count);
+        }
+    }
+
+    private static Color Darken(Color color, float factor)
+    {
+        var rgba = color.ToPixel<Rgba32>();
+        return Color.FromRgba(
+            (byte)(rgba.R * factor),
+            (byte)(rgba.G * factor),
+            (byte)(rgba.B * factor),
+            rgba.A);
+    }
+
+    private static void DrawCell(Image<Rgba32> image, float x, float y, float size, Color color, bool use3D, int count)
+    {
+        if (use3D)
+        {
+            float depth = 3;
+            if (count > 0)
+            {
+                // Draw depth for non-empty cells
+                image.Mutate(ctx => ctx.Fill(Darken(color, 0.6f), new RectangleF(x + depth, y + depth, size, size)));
+            }
+            image.Mutate(ctx => ctx.Fill(color, new RectangleF(x, y, size, size)));
+            if (count > 0)
+            {
+                // Add a small highlight on top/left
+                image.Mutate(ctx => ctx.Fill(Color.FromRgba(255, 255, 255, 40), new RectangleF(x, y, size, 1)));
+                image.Mutate(ctx => ctx.Fill(Color.FromRgba(255, 255, 255, 40), new RectangleF(x, y, 1, size)));
+            }
+        }
+        else
+        {
+            image.Mutate(ctx => ctx.Fill(color, new RectangleF(x, y, size, size)));
         }
     }
 
     private static void DrawCommonItems(Image<Rgba32> image, List<int> years, List<string> userEmails, 
-        Font? fontTitle, Font? fontLabel, int width, int height, bool includePrs, ColorScheme colorScheme)
+        Font? fontTitle, Font? fontLabel, int width, int height, bool includePrs, ColorScheme colorScheme, bool use3D = false)
     {
         if (fontTitle != null)
         {
@@ -257,7 +290,8 @@ public static class HeatmapRenderer
             legendX += 40;
             for (int i = 0; i < 5; i++)
             {
-                image.Mutate(x => x.Fill(colorScheme.GetColorForCount(i * 3), new RectangleF(legendX, legendY + 2, CellSize, CellSize)));
+                int count = i * 3;
+                DrawCell(image, legendX, legendY + 2, CellSize, colorScheme.GetColorForCount(count), use3D, count);
                 legendX += Step;
             }
             image.Mutate(x => x.DrawText("More", fontLabel, colorScheme.SubtextColor, new PointF(legendX + 5, legendY)));
@@ -275,7 +309,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateSvg(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme, bool use3D)
     {
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
         int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
@@ -331,7 +365,7 @@ public static class HeatmapRenderer
             float sectionTop = layout == HeatmapLayout.Horizontal ? gridTopBase : gridTopBase + yi * yearSectionHeight;
             float gridLeft = layout == HeatmapLayout.Horizontal ? currentGridLeft : gridLeftBase;
             
-            DrawSvgYear(writer, year, sectionTop, gridLeft, commitCounts, layout == HeatmapLayout.Horizontal, yi == 0, colorScheme);
+            DrawSvgYear(writer, year, sectionTop, gridLeft, commitCounts, layout == HeatmapLayout.Horizontal, yi == 0, colorScheme, use3D);
             
             if (layout == HeatmapLayout.Horizontal)
                 currentGridLeft += CalculateWeeksForYear(year) * Step + yearGapX;
@@ -347,10 +381,9 @@ public static class HeatmapRenderer
         legendX += 40;
         for (int i = 0; i < 5; i++)
         {
-            Color c = colorScheme.GetColorForCount(i * 3);
-            var rgba = c.ToPixel<Rgba32>();
-            string hex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
-            writer.WriteLine($"  <rect x=\"{legendX}\" y=\"{legendY}\" width=\"{CellSize}\" height=\"{CellSize}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
+            int count = i * 3;
+            Color c = colorScheme.GetColorForCount(count);
+            DrawSvgCell(writer, legendX, legendY, CellSize, c, use3D, count);
             legendX += Step;
         }
         writer.WriteLine($"  <text x=\"{legendX + 5}\" y=\"{legendY + 12}\" class=\"label\">More</text>");
@@ -368,7 +401,7 @@ public static class HeatmapRenderer
     }
 
     private static void DrawSvgYear(StringWriter writer, int year, float sectionTop, float gridLeft, 
-        Dictionary<DateTime, int> commitCounts, bool isHorizontal, bool isFirstYearInHorizontal, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, bool isHorizontal, bool isFirstYearInHorizontal, ColorScheme colorScheme, bool use3D)
     {
         float gridTop = sectionTop + MonthLabelHeight;
         DateTime startDate = new DateTime(year, 1, 1);
@@ -413,9 +446,35 @@ public static class HeatmapRenderer
 
             int count = commitCounts.GetValueOrDefault(currentDate, 0);
             Color c = colorScheme.GetColorForCount(count);
-            var rgba = c.ToPixel<Rgba32>();
-            string hex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
-            writer.WriteLine($"  <rect x=\"{gridLeft + weekIndex * Step}\" y=\"{gridTop + dayOfWeek * Step}\" width=\"{CellSize}\" height=\"{CellSize}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
+            DrawSvgCell(writer, gridLeft + weekIndex * Step, gridTop + dayOfWeek * Step, CellSize, c, use3D, count);
+        }
+    }
+
+    private static void DrawSvgCell(StringWriter writer, float x, float y, float size, Color color, bool use3D, int count)
+    {
+        var rgba = color.ToPixel<Rgba32>();
+        string hex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
+
+        if (use3D)
+        {
+            float depth = 2;
+            if (count > 0)
+            {
+                // Shadow/Depth
+                string shadowHex = $"#{(int)(rgba.R * 0.6):X2}{(int)(rgba.G * 0.6):X2}{(int)(rgba.B * 0.6):X2}";
+                writer.WriteLine($"  <rect x=\"{x + depth}\" y=\"{y + depth}\" width=\"{size}\" height=\"{size}\" fill=\"{shadowHex}\" rx=\"2\" ry=\"2\" />");
+            }
+            writer.WriteLine($"  <rect x=\"{x}\" y=\"{y}\" width=\"{size}\" height=\"{size}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
+            if (count > 0)
+            {
+                // Highlight
+                writer.WriteLine($"  <line x1=\"{x}\" y1=\"{y}\" x2=\"{x + size}\" y2=\"{y}\" stroke=\"white\" stroke-opacity=\"0.2\" stroke-width=\"1\" />");
+                writer.WriteLine($"  <line x1=\"{x}\" y1=\"{y}\" x2=\"{x}\" y2=\"{y + size}\" stroke=\"white\" stroke-opacity=\"0.2\" stroke-width=\"1\" />");
+            }
+        }
+        else
+        {
+            writer.WriteLine($"  <rect x=\"{x}\" y=\"{y}\" width=\"{size}\" height=\"{size}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
         }
     }
 }

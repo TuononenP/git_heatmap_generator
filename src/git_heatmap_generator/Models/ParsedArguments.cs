@@ -19,4 +19,5 @@ public class ParsedArguments
     public ColorTheme Theme { get; set; } = ColorTheme.Default;
     public ColorMode Mode { get; set; } = ColorMode.Dark;
     public List<string> CustomColors { get; set; } = new();
+    public bool Use3DStyle { get; set; }
 }

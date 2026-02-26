@@ -18,6 +18,7 @@ public static class ArgumentParser
     private static readonly string[] StyleFlags = { "--style", "-s", "—style" };
     private static readonly string[] ModeFlags = { "--mode", "-m", "—mode" };
     private static readonly string[] CustomColorsFlags = { "--colors", "-c", "—colors" };
+    private static readonly string[] ThreeDFlags = { "--3d" };
 
     /// <summary>
     /// Parses command-line arguments into a structured result.
@@ -101,6 +102,10 @@ public static class ArgumentParser
             {
                 result.CustomColors = ParseList(args[++i]);
                 result.Theme = ColorTheme.Custom;
+            }
+            else if (ThreeDFlags.Contains(arg))
+            {
+                result.Use3DStyle = true;
             }
             else
             {
@@ -228,6 +233,7 @@ public static class ArgumentParser
         Console.WriteLine("  -c, --colors <hex,...>   Custom colors (4 comma-separated hex codes)");
         Console.WriteLine("  -m, --mode <type>        Mode: dark (default), light");
         Console.WriteLine("  -pr, --pull-requests      Include pull requests in the calculation");
+        Console.WriteLine("  --3d                     Use 3D style for heatmap cells");
         Console.WriteLine("  -h, --help               Show this help message");
         Console.WriteLine();
         Console.WriteLine("Examples:");
