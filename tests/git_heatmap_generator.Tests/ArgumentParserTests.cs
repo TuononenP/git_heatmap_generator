@@ -264,6 +264,17 @@ public class ArgumentParserTests
         Assert.Equal(4, result.CustomColors.Count);
         Assert.Equal("#111111", result.CustomColors[0]);
     }
+
+    [Fact]
+    public void Parse_MissingYear_Works()
+    {
+        string[] args = { "user@mail.com", "/path/to/repo" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Empty(result.Years);
+        Assert.Contains("user@mail.com", result.Emails);
+        Assert.Contains("/path/to/repo", result.RepositoryPaths);
+    }
 }
 
 

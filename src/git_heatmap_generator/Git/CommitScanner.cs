@@ -12,7 +12,7 @@ public static class CommitScanner
     /// for the specified years and email addresses.
     /// This scans ALL branches and tags in each repository.
     /// </summary>
-    public static Dictionary<DateTime, int> Scan(List<string> repoPaths, List<string> emails, List<int> years, bool includePrs = false)
+    public static Dictionary<DateTime, int> Scan(List<string> repoPaths, List<string> emails, List<int>? years = null, bool includePrs = false)
     {
         var totalCounts = new Dictionary<DateTime, int>();
 
@@ -25,7 +25,7 @@ public static class CommitScanner
         return totalCounts;
     }
 
-    private static Dictionary<DateTime, int> ScanSingle(string repoPath, List<string> emails, List<int> years, bool includePrs)
+    private static Dictionary<DateTime, int> ScanSingle(string repoPath, List<string> emails, List<int>? years, bool includePrs)
     {
         var commitCounts = new Dictionary<DateTime, int>();
 
@@ -46,8 +46,11 @@ public static class CommitScanner
                     commit.Author.Email.Equals(e, StringComparison.OrdinalIgnoreCase) ||
                     commit.Committer.Email.Equals(e, StringComparison.OrdinalIgnoreCase));
 
-                if (matchEmail && years.Contains(commit.Author.When.Year))
+                if (matchEmail)
                 {
+                    if (years != null && years.Count > 0 && !years.Contains(commit.Author.When.Year))
+                        continue;
+
                     var date = commit.Author.When.Date;
                     if (!commitCounts.ContainsKey(date))
                     {

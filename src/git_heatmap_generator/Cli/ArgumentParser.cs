@@ -146,7 +146,7 @@ public static class ArgumentParser
         }
 
         // Validation
-        if (result.Years.Count == 0 || result.Emails.Count == 0 || result.RepositoryPaths.Count == 0)
+        if (result.Emails.Count == 0 || result.RepositoryPaths.Count == 0)
         {
             return null;
         }
@@ -174,6 +174,8 @@ public static class ArgumentParser
         // Try single year
         if (int.TryParse(input, out int singleYear))
         {
+            // Simple heuristic: years should be between 1900 and 2100
+            if (singleYear < 1900 || singleYear > 2100) return null;
             return new List<int> { singleYear };
         }
 
@@ -229,7 +231,7 @@ public static class ArgumentParser
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  -r, --repo <path>        Path to the local Git repository (comma-separated or multiple times)");
-        Console.WriteLine("  -y, --year <year|range>  Year (e.g., 2025) or range (e.g., 2022...2026)");
+        Console.WriteLine("  -y, --year <year|range>  Year (e.g., 2025) or range (e.g., 2022...2026). Optional.");
         Console.WriteLine("  -e, --email <email>      User email (can be comma-separated or used multiple times)");
         Console.WriteLine("  -o, --output <folder>    Output path or folder for the generated image (default: current directory)");
         Console.WriteLine("  -l, --layout <type>      Layout: vertical (default), horizontal, separate");
@@ -244,6 +246,7 @@ public static class ArgumentParser
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  git_heatmap_generator 2025 user@example.com /path/to/repo");
+        Console.WriteLine("  git_heatmap_generator user@example.com /path/to/repo (shows all years)");
         Console.WriteLine("  git_heatmap_generator -r ./repo1,./repo2 -y 2022...2026 -e user@example.com");
         Console.WriteLine("  git_heatmap_generator -y 2025 -e dev@mail.com ./repo1 ./repo2 ./repo3");
     }

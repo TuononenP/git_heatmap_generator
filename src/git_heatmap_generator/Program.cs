@@ -35,6 +35,20 @@ class Program
             }
         }
 
+        var commitCounts = CommitScanner.Scan(parsed.RepositoryPaths, parsed.Emails, parsed.Years.Count > 0 ? parsed.Years : null, parsed.IncludePullRequests);
+
+        // If no years were specified, populate them from the scan results
+        if (parsed.Years.Count == 0)
+        {
+            parsed.Years = commitCounts.Keys.Select(d => d.Year).Distinct().OrderBy(y => y).ToList();
+        }
+
+        if (parsed.Years.Count == 0)
+        {
+            Console.WriteLine("No activity found for the specified emails.");
+            return;
+        }
+
         string yearDisplay = parsed.Years.Count == 1
             ? parsed.Years[0].ToString()
             : $"{parsed.Years.Min()}-{parsed.Years.Max()}";
@@ -47,8 +61,6 @@ class Program
         Console.WriteLine($"Style: {parsed.Theme}");
         Console.WriteLine($"Mode: {parsed.Mode}");
         if (parsed.IncludePullRequests) Console.WriteLine("Including pull requests (merge commits).");
-
-        var commitCounts = CommitScanner.Scan(parsed.RepositoryPaths, parsed.Emails, parsed.Years, parsed.IncludePullRequests);
 
         Console.WriteLine($"Found activity on {commitCounts.Count} different days.");
 

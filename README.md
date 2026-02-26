@@ -7,7 +7,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 ## Features
 
 - Scans one or **multiple local Git repositories** and aggregates the activity.
-- Supports a **single year** or a **year range** (e.g., `2022...2026`).
+- Supports a **single year**, a **year range** (e.g., `2022...2026`), or **all years with activity**.
 - Supports different **color schemes** (e.g., Default, Blue, Red, Purple, Custom).
 - Supports **Light and Dark modes** for all color schemes.
 - Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
@@ -22,7 +22,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
   - "Amount of commits" label (or "Amount of commits and pull requests" if the flag is enabled).
 - Renders a "Less — [Colors] — More" legend at the bottom right.
 
-- Outputs the result as `heatmap_{year}.png` or `heatmap_{startYear}-{endYear}.png`.
+- Outputs the result as `heatmap_{year}.png` or `heatmap_{startYear}-{endYear}.png`. If no year is specified, every year with commits for the email(s) is included.
 
 ## Prerequisites
 
@@ -112,7 +112,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | Flag | Description |
 |------|-------------|
 | `-r`, `--repo <path>` | Path to the local Git repository. |
-| `-y`, `--year <year\|range>` | Year (e.g., `2025`) or range (e.g., `2022...2026`). Can be used multiple times. |
+| `-y`, `--year <year\|range>` | Year (e.g., `2025`) or range (e.g., `2022...2026`). Optional. Can be used multiple times. |
 | `-e`, `--email <email>` | User email(s) (comma-separated or used multiple times). |
 | `-o`, `--output <path>` | Output path or folder (e.g., `./out/test.png` or `./out/test.svg`). |
 | `-f`, `--format <type>` | Output format: `png` (default), `svg`. |
@@ -127,7 +127,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 
 ### Parameters
 
-1. **`year`**: A single four-digit year (e.g., `2024`) or a year range using `...` (e.g., `2022...2026`).
+1. **`year` (optional)**: A single four-digit year (e.g., `2024`), a year range using `...` (e.g., `2022...2026`), or omitted to show all years with activity. Omitting the year parameter will automatically detect all years with commits for the specified emails.
 2. **`email`**: One or more email addresses, comma-separated (e.g., `dev@example.com` or `dev@example.com,alt@example.com`). Commits matching any of the emails are combined.
 3. **`repository_path`**: One or more local file paths to Git repositories. You can provide multiple paths as separate arguments or comma-separated.
 
@@ -140,6 +140,14 @@ dotnet run --project src/git_heatmap_generator 2026 dev@example.com ./my_awesome
 ```
 
 This generates `heatmap_2026.png` with the activity for 2026.
+
+**All years with activity:**
+
+```bash
+dotnet run --project src/git_heatmap_generator dev@example.com ./my_awesome_project
+```
+
+This automatically detects all years with activity for `dev@example.com` and includes them in the heatmap.
 
 **SVG format:**
 
