@@ -16,6 +16,8 @@ public class ParsedArguments
     public bool ShowHelp { get; set; }
     public bool IncludePullRequests { get; set; }
     public OutputFormat Format { get; set; } = OutputFormat.Png;
+    public ColorTheme Theme { get; set; } = ColorTheme.Default;
+    public ColorMode Mode { get; set; } = ColorMode.Dark;
 }
 
 

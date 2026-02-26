@@ -18,7 +18,19 @@ public class RendererTests
     [InlineData(100, "#39d353")]
     public void GetColorForCount_ReturnsCorrectColor(int count, string expectedHex)
     {
-        var color = HeatmapRenderer.GetColorForCount(count);
+        var scheme = ColorScheme.GetTheme(ColorTheme.Default);
+        var color = scheme.GetColorForCount(count);
+        Assert.Equal(Color.ParseHex(expectedHex), color);
+    }
+
+    [Theory]
+    [InlineData(0, "#ebedf0")]
+    [InlineData(1, "#9be9a8")]
+    [InlineData(10, "#216e39")]
+    public void GetColorForCount_LightMode_ReturnsCorrectColor(int count, string expectedHex)
+    {
+        var scheme = ColorScheme.GetTheme(ColorTheme.Default, ColorMode.Light);
+        var color = scheme.GetColorForCount(count);
         Assert.Equal(Color.ParseHex(expectedHex), color);
     }
 

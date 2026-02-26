@@ -42,6 +42,8 @@ class Program
         Console.WriteLine($"Scanning repositories: {repoDisplay}");
         Console.WriteLine($"Looking for {emailDisplay} in {yearDisplay}...");
         Console.WriteLine($"Layout: {parsed.Layout}");
+        Console.WriteLine($"Style: {parsed.Theme}");
+        Console.WriteLine($"Mode: {parsed.Mode}");
         if (parsed.IncludePullRequests) Console.WriteLine("Including pull requests (merge commits).");
 
         var commitCounts = CommitScanner.Scan(parsed.RepositoryPaths, parsed.Emails, parsed.Years, parsed.IncludePullRequests);
@@ -65,13 +67,13 @@ class Program
                     yearOutputPath = Path.Combine(directory ?? "", $"{fileName}_{year}{extension}");
                 }
 
-                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests, parsed.Format);
+                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode);
                 Console.WriteLine($"Heatmap generated for {year}: {path}");
             }
         }
         else
         {
-            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests, parsed.Format);
+            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode);
             Console.WriteLine($"Heatmap generated: {outputPath}");
         }
 

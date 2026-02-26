@@ -217,6 +217,42 @@ public class ArgumentParserTests
         Assert.NotNull(result);
         Assert.Equal(OutputFormat.Png, result.Format);
     }
+
+    [Fact]
+    public void Parse_WithStyleFlag_ReturnsColorTheme()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--style", "red" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(ColorTheme.Red, result.Theme);
+    }
+
+    [Fact]
+    public void Parse_WithShortStyleFlag_ReturnsColorTheme()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-s", "blue" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(ColorTheme.Blue, result.Theme);
+    }
+
+    [Fact]
+    public void Parse_WithModeFlag_ReturnsColorMode()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--mode", "light" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(ColorMode.Light, result.Mode);
+    }
+
+    [Fact]
+    public void Parse_WithShortModeFlag_ReturnsColorMode()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-m", "dark" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(ColorMode.Dark, result.Mode);
+    }
 }
 
 
