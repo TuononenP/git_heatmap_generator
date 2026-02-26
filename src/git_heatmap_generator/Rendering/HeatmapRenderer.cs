@@ -1,9 +1,11 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
 using git_heatmap_generator.Models;
+using Path = System.IO.Path;
 
 namespace git_heatmap_generator.Rendering;
 
@@ -86,9 +88,17 @@ public static class HeatmapRenderer
     }
 
     public static string Generate(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false, bool use3DChart = false)
     {
         var colorScheme = ColorScheme.GetTheme(theme, mode, customColors);
+        
+        if (use3DChart)
+        {
+            if (format == OutputFormat.Svg)
+                return Generate3DSvgChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
+            return Generate3DChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
+        }
+
         if (format == OutputFormat.Svg)
             return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D);
 
@@ -96,6 +106,118 @@ public static class HeatmapRenderer
             return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
         else
             return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
+    }
+
+    private static string Generate3DChart(List<int> years, List<string> userEmails,
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+    {
+        // Isometric Constants
+        const float isoW = 14;
+        const float isoH = 7;
+        const float barScale = 6;
+        const float minBarHeight = 3;
+        const float cellGap = 1.5f;
+
+        // Grid boundaries: week range [0, 52], day range [0, 6]
+        // cx = (week - day) * isoW => range [-6, 52] * isoW
+        // cy = (week + day) * isoH => range [0, 58] * isoH
+        int gridWidth = (int)(58 * isoW);
+        int gridHeight = (int)(58 * isoH);
+
+        int yearStepY = 120; // How much each year adds to total height (vertical overlap for compactness)
+        int width = gridWidth + Padding * 2 + 120;
+        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 100 + Padding;
+
+        var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
+        var (fontTitle, _, fontYear) = GetFonts();
+
+        using (Image<Rgba32> image = new Image<Rgba32>(width, height))
+        {
+            image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
+            
+            if (fontTitle != null)
+            {
+                string emailDisplay = string.Join(", ", userEmails);
+                string yearDisplay = years.Count == 1 ? years[0].ToString() : $"{years.Min()}-{years.Max()}";
+                image.Mutate(x => x.DrawText(emailDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
+                image.Mutate(x => x.DrawText($"{yearDisplay}", fontTitle, colorScheme.SubtextColor, new PointF(Padding, Padding + 35)));
+            }
+
+            float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
+            float currentOriginY = Padding + TitleAreaHeight + 50;
+
+            foreach (var year in sortedYears)
+            {
+                if (fontYear != null)
+                {
+                    image.Mutate(x => x.DrawText(year.ToString(), fontYear, colorScheme.TextColor, new PointF(Padding, currentOriginY + 20)));
+                }
+
+                DateTime startDate = new DateTime(year, 1, 1);
+                int totalDays = (new DateTime(year, 12, 31) - startDate).Days + 1;
+                int startOffset = (int)startDate.DayOfWeek;
+
+                for (int i = 0; i < totalDays; i++)
+                {
+                    DateTime currentDate = startDate.AddDays(i);
+                    int week = (i + startOffset) / 7;
+                    int day = (int)currentDate.DayOfWeek;
+
+                    float cx = originX + (week - day) * isoW;
+                    float cy = currentOriginY + (week + day) * isoH;
+
+                    int count = commitCounts.GetValueOrDefault(currentDate, 0);
+                    Color baseColor = colorScheme.GetColorForCount(count);
+                    
+                    // Height proportional to count with a cap
+                    float barHeight = count == 0 ? 2 : Math.Min(40, count) * barScale / 2.5f + minBarHeight;
+
+                    DrawIsometricBar(image, cx, cy, isoW - cellGap, isoH - cellGap, barHeight, baseColor);
+                }
+                
+                currentOriginY += yearStepY;
+            }
+
+            string finalPath = ResolveOutputPath(outputPathOrFolder, GetDefaultFileName(years, HeatmapLayout.Vertical));
+            SaveImage(image, finalPath);
+            return finalPath;
+        }
+    }
+
+    private static void DrawIsometricBar(Image<Rgba32> image, float x, float y, float w, float h, float height, Color color)
+    {
+        // Points for the faces
+        var topPoints = new PointF[] {
+            new PointF(x, y - height),
+            new PointF(x + w, y + h - height),
+            new PointF(x, y + 2 * h - height),
+            new PointF(x - w, y + h - height)
+        };
+
+        var leftPoints = new PointF[] {
+            new PointF(x - w, y + h - height),
+            new PointF(x, y + 2 * h - height),
+            new PointF(x, y + 2 * h),
+            new PointF(x - w, y + h)
+        };
+
+        var rightPoints = new PointF[] {
+            new PointF(x, y + 2 * h - height),
+            new PointF(x + w, y + h - height),
+            new PointF(x + w, y + h),
+            new PointF(x, y + 2 * h)
+        };
+
+        Color leftColor = Darken(color, 0.85f);
+        Color rightColor = Darken(color, 0.70f);
+
+        image.Mutate(ctx => ctx.Fill(leftColor, new Polygon(leftPoints)));
+        image.Mutate(ctx => ctx.Fill(rightColor, new Polygon(rightPoints)));
+        image.Mutate(ctx => ctx.Fill(color, new Polygon(topPoints)));
+        
+        // Add a very subtle outline to separate same-colored bars
+        var outlineColor = Color.FromRgba(255, 255, 255, 15);
+        image.Mutate(ctx => ctx.Draw(outlineColor, 1f, new Polygon(topPoints)));
     }
 
     private static string GenerateVertical(List<int> years, List<string> userEmails,
@@ -477,5 +599,107 @@ public static class HeatmapRenderer
             writer.WriteLine($"  <rect x=\"{x}\" y=\"{y}\" width=\"{size}\" height=\"{size}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
         }
     }
-}
 
+    private static string Generate3DSvgChart(List<int> years, List<string> userEmails,
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+    {
+        // Isometric Constants
+        const float isoW = 14;
+        const float isoH = 7;
+        const float barScale = 6;
+        const float minBarHeight = 3;
+        const float cellGap = 1.5f;
+
+        int gridWidth = (int)(58 * isoW);
+        int gridHeight = (int)(58 * isoH);
+
+        int yearStepY = 120; // How much each year adds to total height (vertical overlap for compactness)
+        int width = gridWidth + Padding * 2 + 120;
+        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 100 + Padding;
+
+        var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
+        
+        using var writer = new StringWriter();
+        string bgHex = colorScheme.BackgroundColor.ToPixel<Rgba32>().ToHex().Substring(0, 6);
+        string textHex = colorScheme.TextColor.ToPixel<Rgba32>().ToHex().Substring(0, 6);
+        string subtextHex = colorScheme.SubtextColor.ToPixel<Rgba32>().ToHex().Substring(0, 6);
+
+        writer.WriteLine($"<svg width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\" xmlns=\"http://www.w3.org/2000/svg\">");
+        writer.WriteLine($"  <rect width=\"100%\" height=\"100%\" fill=\"#{bgHex}\" />");
+        
+        writer.WriteLine("  <style>");
+        writer.WriteLine($"    .title {{ fill: #{textHex}; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }}");
+        writer.WriteLine($"    .subtitle {{ fill: #{subtextHex}; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }}");
+        writer.WriteLine($"    .year-label {{ fill: #{textHex}; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; }}");
+        writer.WriteLine("  </style>");
+
+        string emailDisplay = System.Net.WebUtility.HtmlEncode(string.Join(", ", userEmails));
+        string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{emailDisplay}</text>");
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
+
+        float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
+        float currentOriginY = Padding + TitleAreaHeight + 50;
+
+        foreach (var year in sortedYears)
+        {
+            writer.WriteLine($"  <text x=\"{Padding}\" y=\"{currentOriginY + 34}\" class=\"year-label\">{year}</text>");
+
+            DateTime startDate = new DateTime(year, 1, 1);
+            int totalDays = (new DateTime(year, 12, 31) - startDate).Days + 1;
+            int startOffset = (int)startDate.DayOfWeek;
+
+            for (int i = 0; i < totalDays; i++)
+            {
+                DateTime currentDate = startDate.AddDays(i);
+                int week = (i + startOffset) / 7;
+                int day = (int)currentDate.DayOfWeek;
+
+                float cx = originX + (week - day) * isoW;
+                float cy = currentOriginY + (week + day) * isoH;
+
+                int count = commitCounts.GetValueOrDefault(currentDate, 0);
+                Color baseColor = colorScheme.GetColorForCount(count);
+                float barHeight = count == 0 ? 2 : Math.Min(40, count) * barScale / 2.5f + minBarHeight;
+
+                DrawSvgIsometricBar(writer, cx, cy, isoW - cellGap, isoH - cellGap, barHeight, baseColor);
+            }
+            currentOriginY += yearStepY;
+        }
+
+        writer.WriteLine("</svg>");
+
+        string defaultFileName = GetDefaultFileName(years, HeatmapLayout.Vertical, OutputFormat.Svg);
+        string finalPath = ResolveOutputPath(outputPathOrFolder, defaultFileName);
+        
+        string? dir = Path.GetDirectoryName(finalPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        
+        File.WriteAllText(finalPath, writer.ToString());
+        return finalPath;
+    }
+
+    private static void DrawSvgIsometricBar(StringWriter writer, float x, float y, float w, float h, float height, Color color)
+    {
+        var rgba = color.ToPixel<Rgba32>();
+        string topHex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
+        
+        // Define faces
+        // Top Face
+        string topPoints = $"{x},{y - height} {x + w},{y + h - height} {x},{y + 2 * h - height} {x - w},{y + h - height}";
+        
+        // Darken left/right
+        string leftHex = $"#{(byte)(rgba.R * 0.85):X2}{(byte)(rgba.G * 0.85):X2}{(byte)(rgba.B * 0.85):X2}";
+        string rightHex = $"#{(byte)(rgba.R * 0.70):X2}{(byte)(rgba.G * 0.70):X2}{(byte)(rgba.B * 0.70):X2}";
+        
+        // Left Face
+        string leftPoints = $"{x - w},{y + h - height} {x},{y + 2 * h - height} {x},{y + 2 * h} {x - w},{y + h}";
+        
+        // Right Face
+        string rightPoints = $"{x},{y + 2 * h - height} {x + w},{y + h - height} {x + w},{y + h} {x},{y + 2 * h}";
+
+        writer.WriteLine($"  <polygon points=\"{leftPoints}\" fill=\"{leftHex}\" />");
+        writer.WriteLine($"  <polygon points=\"{rightPoints}\" fill=\"{rightHex}\" />");
+        writer.WriteLine($"  <polygon points=\"{topPoints}\" fill=\"{topHex}\" stroke=\"white\" stroke-opacity=\"0.06\" stroke-width=\"0.5\" />");
+    }
+}

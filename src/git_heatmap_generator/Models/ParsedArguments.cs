@@ -20,4 +20,5 @@ public class ParsedArguments
     public ColorMode Mode { get; set; } = ColorMode.Dark;
     public List<string> CustomColors { get; set; } = new();
     public bool Use3DStyle { get; set; }
+    public bool Use3DChart { get; set; }
 }

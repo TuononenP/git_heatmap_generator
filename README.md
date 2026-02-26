@@ -12,6 +12,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 - Supports **Light and Dark modes** for all color schemes.
 - Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
   - Supports a **3D style** for a premium, elevated look.
+  - Supports an **isometric 3D chart style** with contribution pillars.
   - Multiple years are stacked vertically (newest on top) with year labels.
 - Includes textual metadata on the image:
   - User email and year/range as the title.
@@ -121,6 +122,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | `-m`, `--mode <type>` | Background mode: `dark` (default), `light`. |
 | `-pr`, `--pull-requests` | Include pull requests in the calculation. |
 | `--3d` | Use a 3D elevated style for heatmap cells. |
+| `--chart` | Use an isometric 3D chart style with elevated pillars. |
 | `-h`, `--help` | Show help message. |
 
 ### Parameters
@@ -210,6 +212,14 @@ dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome
 ```
 
 This generates a heatmap with an elevated 3D effect on the cells, giving it a premium look.
+
+**Isometric 3D Chart Style:**
+
+```bash
+dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome_project -- --chart
+```
+
+This generates an isometric 3D view of the heatmap where each day's contribution is represented by an elevated pillar.
 
 **Using explicit flags:**
 
