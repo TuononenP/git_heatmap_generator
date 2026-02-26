@@ -72,7 +72,7 @@ If you prefer a standalone executable:
 
 1.  **Publish the project**:
     ```bash
-    dotnet publish src/git_heatmap_generator -c Release -r <RID> --self-contained true /p:PublishSingleFile=true
+    dotnet publish src/git_heatmap_generator -c Release -r <RID> --self-contained true /p:PublishSingleFile=true -o ./publish
     ```
     *Replace `<RID>` with your platform:*
     *   **Windows**: `win-x64`
@@ -81,8 +81,8 @@ If you prefer a standalone executable:
     *   **Linux**: `linux-x64`
 
 2.  **Add to Path**:
-    *   **macOS/Linux**: Move the resulting binary to `/usr/local/bin` or add its folder to your `$PATH`.
-    *   **Windows**: Add the folder containing the generated `.exe` to your System Environment Variables (PATH).
+    *   **macOS/Linux**: Move the binary from the `./publish` folder to `/usr/local/bin` or add the `./publish` folder to your `$PATH`.
+    *   **Windows**: Add the `./publish` folder containing the generated `.exe` to your System Environment Variables (PATH).
 
 
 ### Option 3: Docker
