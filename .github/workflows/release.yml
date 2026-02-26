@@ -1,0 +1,60 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Extract Version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Publish (Linux x64)
+        run: |
+          dotnet publish src/git_heatmap_generator/git_heatmap_generator.csproj -c Release -r linux-x64 --self-contained true \
+          -p:PublishSingleFile=true -p:AssemblyName=git-heatmap-generator \
+          -p:Version=${{ steps.get_version.outputs.VERSION }} \
+          -o ./publish/linux
+
+      - name: Publish (Windows x64)
+        run: |
+          dotnet publish src/git_heatmap_generator/git_heatmap_generator.csproj -c Release -r win-x64 --self-contained true \
+          -p:PublishSingleFile=true -p:AssemblyName=git-heatmap-generator \
+          -p:Version=${{ steps.get_version.outputs.VERSION }} \
+          -o ./publish/windows
+
+      - name: Publish (macOS ARM64)
+        run: |
+          dotnet publish src/git_heatmap_generator/git_heatmap_generator.csproj -c Release -r osx-arm64 --self-contained true \
+          -p:PublishSingleFile=true -p:AssemblyName=git-heatmap-generator \
+          -p:Version=${{ steps.get_version.outputs.VERSION }} \
+          -o ./publish/macos-arm
+
+      - name: Zip Artifacts with App Name and Tag
+        run: |
+          zip -j "git-heatmap-generator-${{ github.ref_name }}-linux-x64.zip" ./publish/linux/*
+          zip -j "git-heatmap-generator-${{ github.ref_name }}-win-x64.zip" ./publish/windows/*
+          zip -j "git-heatmap-generator-${{ github.ref_name }}-osx-arm64.zip" ./publish/macos-arm/*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            git-heatmap-generator-${{ github.ref_name }}-linux-x64.zip
+            git-heatmap-generator-${{ github.ref_name }}-win-x64.zip
+            git-heatmap-generator-${{ github.ref_name }}-osx-arm64.zip
+          generate_release_notes: true
