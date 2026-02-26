@@ -52,7 +52,7 @@ public static class HeatmapRenderer
         {
             return $"heatmap_horizontal_{years.Min()}-{years.Max()}.{extension}";
         }
-        
+
         return years.Count == 1
             ? $"heatmap_{years[0]}.{extension}"
             : $"heatmap_{years.Min()}-{years.Max()}.{extension}";
@@ -88,28 +88,28 @@ public static class HeatmapRenderer
     }
 
     public static string Generate(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false, bool use3DChart = false, string? customTitle = null)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false, bool use3DChart = false, string? customTitle = null, bool hideStats = false)
     {
         var colorScheme = ColorScheme.GetTheme(theme, mode, customColors);
         
         if (use3DChart)
         {
             if (format == OutputFormat.Svg)
-                return Generate3DSvgChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle);
-            return Generate3DChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle);
+                return Generate3DSvgChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle, hideStats);
+            return Generate3DChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle, hideStats);
         }
 
         if (format == OutputFormat.Svg)
-            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D, customTitle);
+            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D, customTitle, hideStats);
 
         if (layout == HeatmapLayout.Vertical)
-            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle);
+            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle, hideStats);
         else
-            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle);
+            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle, hideStats);
     }
 
     private static string Generate3DChart(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle, bool hideStats)
     {
         // Isometric Constants
         const float isoW = 14;
@@ -124,9 +124,11 @@ public static class HeatmapRenderer
         int gridWidth = (int)(58 * isoW);
         int gridHeight = (int)(58 * isoH);
 
+        int statsHeight = hideStats ? 0 : 200;
         int yearStepY = 160; // How much each year adds to total height (vertical overlap for compactness)
         int width = gridWidth + Padding * 2 + 120;
-        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
+        if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+        int height = Padding + TitleAreaHeight + statsHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
 
         var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
         var (fontTitle, fontLabel, fontYear) = GetFonts();
@@ -138,13 +140,20 @@ public static class HeatmapRenderer
             if (fontTitle != null)
             {
                 string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
-                string yearDisplay = years.Count == 1 ? years[0].ToString() : $"{years.Min()}-{years.Max()}";
+                string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
                 image.Mutate(x => x.DrawText(titleDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
                 image.Mutate(x => x.DrawText($"{yearDisplay}", fontTitle, colorScheme.SubtextColor, new PointF(Padding, Padding + 35)));
             }
 
+            if (!hideStats)
+            {
+                var stats = DashboardStats.Calculate(commitCounts, years);
+                float statsTop = Padding + TitleAreaHeight - 10;
+                DrawStats(image, stats, statsTop, Padding, fontTitle, fontLabel, colorScheme);
+            }
+
             float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
-            float currentOriginY = Padding + TitleAreaHeight + 60;
+            float currentOriginY = Padding + TitleAreaHeight + statsHeight + 60;
 
             foreach (var year in sortedYears)
             {
@@ -241,13 +250,16 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateVertical(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle, bool hideStats, HeatmapLayout layout = HeatmapLayout.Vertical)
     {
+        int statsHeight = hideStats ? 0 : 200;
         int yearSectionHeight = MonthLabelHeight + YearGridHeight + YearGap;
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
 
         int width = Padding + LabelAreaWidth + maxWeeks * Step + Padding;
-        int height = Padding + TitleAreaHeight + years.Count * yearSectionHeight - YearGap + LegendAreaHeight + Padding;
+        if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+        
+        int height = Padding + TitleAreaHeight + statsHeight + years.Count * yearSectionHeight - YearGap + LegendAreaHeight + Padding;
 
         var sortedYears = years.OrderByDescending(y => y).ToList();
         var (fontTitle, fontLabel, fontYear) = GetFonts();
@@ -257,8 +269,15 @@ public static class HeatmapRenderer
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
             DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D, customTitle);
 
+            if (!hideStats)
+            {
+                var stats = DashboardStats.Calculate(commitCounts, years);
+                float statsTop = Padding + TitleAreaHeight - 10;
+                DrawStats(image, stats, statsTop, Padding, fontTitle, fontLabel, colorScheme);
+            }
+
             float gridLeft = Padding + LabelAreaWidth;
-            float gridTopBase = Padding + TitleAreaHeight;
+            float gridTopBase = Padding + TitleAreaHeight + statsHeight;
 
             for (int yi = 0; yi < sortedYears.Count; yi++)
             {
@@ -267,23 +286,60 @@ public static class HeatmapRenderer
                 DrawYear(image, year, sectionTop, gridLeft, commitCounts, fontYear, fontLabel, colorScheme, use3D: use3D);
             }
 
-            string finalPath = ResolveOutputPath(outputPathOrFolder, GetDefaultFileName(years, HeatmapLayout.Vertical));
+            string finalPath = ResolveOutputPath(outputPathOrFolder, GetDefaultFileName(years, layout));
             SaveImage(image, finalPath);
             return finalPath;
         }
     }
 
+
+    private static void DrawStats(Image<Rgba32> image, DashboardStats stats, float top, float left, Font? fontTitle, Font? fontLabel, ColorScheme colorScheme)
+    {
+        if (fontTitle == null || fontLabel == null) return;
+
+        float currentX = left;
+        float boxWidth = 150;
+        float rowHeight = 70;
+        
+        // Row 1
+        DrawStatBox(image, "Total Commits", stats.TotalCommits.ToString(), currentX, top, boxWidth, fontTitle, fontLabel, colorScheme);
+        currentX += boxWidth;
+        DrawStatBox(image, "Active Days", stats.ActiveDays.ToString(), currentX, top, boxWidth, fontTitle, fontLabel, colorScheme);
+        currentX += boxWidth;
+        DrawStatBox(image, "Max per Day", stats.MaxCommitsPerDay.ToString(), currentX, top, boxWidth, fontTitle, fontLabel, colorScheme);
+        currentX += boxWidth;
+        DrawStatBox(image, "Avg per Active Day", stats.AverageCommitsPerActiveDay.ToString("F1"), currentX, top, boxWidth, fontTitle, fontLabel, colorScheme);
+
+        // Row 2
+        currentX = left;
+        float secondRowTop = top + rowHeight;
+        DrawStatBox(image, "Longest Streak", $"{stats.LongestStreak} days", currentX, secondRowTop, boxWidth, fontTitle, fontLabel, colorScheme);
+        currentX += boxWidth;
+        DrawStatBox(image, "Most Active Day", stats.MostActiveDayOfWeek.ToString(), currentX, secondRowTop, boxWidth, fontTitle, fontLabel, colorScheme);
+        currentX += boxWidth;
+        DrawStatBox(image, "Most Active Month", stats.MostActiveMonth, currentX, secondRowTop, boxWidth, fontTitle, fontLabel, colorScheme);
+    }
+
+    private static void DrawStatBox(Image<Rgba32> image, string label, string value, float x, float y, float width, Font fontTitle, Font fontLabel, ColorScheme colorScheme)
+    {
+        image.Mutate(ctx => ctx.DrawText(label, fontLabel, colorScheme.SubtextColor, new PointF(x, y)));
+        image.Mutate(ctx => ctx.DrawText(value, fontTitle, colorScheme.TextColor, new PointF(x, y + 25)));
+    }
+
     private static string GenerateHorizontal(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle, bool hideStats)
     {
         var sortedYears = years.OrderBy(y => y).ToList();
 
+        int statsHeight = hideStats ? 0 : 200;
         int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
         int yearGapX = 40;
         int horizontalTitleArea = TitleAreaHeight + 20; // Extra space for year labels in horizontal layout
 
         int width = Padding + LabelAreaWidth + totalWeeks * Step + (years.Count - 1) * yearGapX + Padding;
-        int height = Padding + horizontalTitleArea + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
+        if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+        
+        int height = Padding + horizontalTitleArea + statsHeight + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
 
         var (fontTitle, fontLabel, fontYear) = GetFonts();
 
@@ -292,8 +348,15 @@ public static class HeatmapRenderer
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
             DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D, customTitle);
 
+            if (!hideStats)
+            {
+                var stats = DashboardStats.Calculate(commitCounts, years);
+                float statsTop = Padding + TitleAreaHeight - 10;
+                DrawStats(image, stats, statsTop, Padding, fontTitle, fontLabel, colorScheme);
+            }
+
             float gridLeftBase = Padding + LabelAreaWidth;
-            float gridTopBase = Padding + horizontalTitleArea;
+            float gridTopBase = Padding + horizontalTitleArea + statsHeight;
 
             float currentGridLeft = gridLeftBase;
             for (int yi = 0; yi < sortedYears.Count; yi++)
@@ -451,7 +514,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateSvg(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle, bool hideStats)
     {
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
         int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
@@ -460,15 +523,18 @@ public static class HeatmapRenderer
         int horizontalTitleArea = TitleAreaHeight + 20;
 
         int width, height;
+        int statsHeight = hideStats ? 0 : 200;
         if (layout == HeatmapLayout.Horizontal)
         {
             width = Padding + LabelAreaWidth + totalWeeks * Step + (years.Count - 1) * yearGapX + Padding;
-            height = Padding + horizontalTitleArea + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
+            if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+            height = Padding + horizontalTitleArea + statsHeight + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
         }
         else
         {
             width = Padding + LabelAreaWidth + maxWeeks * Step + Padding;
-            height = Padding + TitleAreaHeight + years.Count * yearSectionHeight - YearGap + LegendAreaHeight + Padding;
+            if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+            height = Padding + TitleAreaHeight + statsHeight + years.Count * yearSectionHeight - YearGap + LegendAreaHeight + Padding;
         }
 
         using var writer = new StringWriter();
@@ -494,8 +560,36 @@ public static class HeatmapRenderer
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{titleDisplay}</text>");
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
 
+        if (!hideStats)
+        {
+            var stats = DashboardStats.Calculate(commitCounts, years);
+            float statsTop = Padding + TitleAreaHeight - 10;
+            float currentX = Padding;
+            float boxWidth = 150;
+            float rowHeight = 70;
+            
+            // Row 1
+            DrawSvgStat(writer, "Total Commits", stats.TotalCommits.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Active Days", stats.ActiveDays.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Max per Day", stats.MaxCommitsPerDay.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Avg per Active Day", stats.AverageCommitsPerActiveDay.ToString("F1"), currentX, statsTop, subtextHex, textHex);
+
+            // Row 2
+            currentX = Padding;
+            float secondRowTop = statsTop + rowHeight;
+            DrawSvgStat(writer, "Longest Streak", $"{stats.LongestStreak} days", currentX, secondRowTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Most Active Day", stats.MostActiveDayOfWeek.ToString(), currentX, secondRowTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Most Active Month", stats.MostActiveMonth, currentX, secondRowTop, subtextHex, textHex);
+        }
+
         float gridLeftBase = Padding + LabelAreaWidth;
-        float gridTopBase = layout == HeatmapLayout.Horizontal ? Padding + horizontalTitleArea : Padding + TitleAreaHeight;
+        float gridTopBase = layout == HeatmapLayout.Horizontal ? Padding + horizontalTitleArea + statsHeight
+            : Padding + TitleAreaHeight + statsHeight;
 
         var sortedYears = layout == HeatmapLayout.Horizontal 
             ? years.OrderBy(y => y).ToList() 
@@ -541,6 +635,12 @@ public static class HeatmapRenderer
         
         File.WriteAllText(finalPath, writer.ToString());
         return finalPath;
+    }
+
+    private static void DrawSvgStat(StringWriter writer, string label, string value, float x, float y, string subtextHex, string textHex)
+    {
+        writer.WriteLine($"  <text x=\"{x}\" y=\"{y}\" class=\"label\">{label}</text>");
+        writer.WriteLine($"  <text x=\"{x}\" y=\"{y + 25}\" class=\"title\">{value}</text>");
     }
 
     private static void DrawSvgYear(StringWriter writer, int year, float sectionTop, float gridLeft, 
@@ -622,7 +722,7 @@ public static class HeatmapRenderer
     }
 
     private static string Generate3DSvgChart(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle, bool hideStats)
     {
         // Isometric Constants
         const float isoW = 14;
@@ -634,9 +734,11 @@ public static class HeatmapRenderer
         int gridWidth = (int)(58 * isoW);
         int gridHeight = (int)(58 * isoH);
 
+        int statsHeight = hideStats ? 0 : 200;
         int yearStepY = 160; // How much each year adds to total height (vertical overlap for compactness)
         int width = gridWidth + Padding * 2 + 120;
-        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
+        if (!hideStats) width = Math.Max(width, Padding + 750 + Padding);
+        int height = Padding + TitleAreaHeight + statsHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
 
         var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
         
@@ -661,8 +763,35 @@ public static class HeatmapRenderer
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{titleDisplay}</text>");
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
 
+        if (!hideStats)
+        {
+            var stats = DashboardStats.Calculate(commitCounts, years);
+            float statsTop = Padding + TitleAreaHeight - 10;
+            float currentX = Padding;
+            float boxWidth = 150;
+            float rowHeight = 70;
+            
+            // Row 1
+            DrawSvgStat(writer, "Total Commits", stats.TotalCommits.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Active Days", stats.ActiveDays.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Max per Day", stats.MaxCommitsPerDay.ToString(), currentX, statsTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Avg per Active Day", stats.AverageCommitsPerActiveDay.ToString("F1"), currentX, statsTop, subtextHex, textHex);
+
+            // Row 2
+            currentX = Padding;
+            float secondRowTop = statsTop + rowHeight;
+            DrawSvgStat(writer, "Longest Streak", $"{stats.LongestStreak} days", currentX, secondRowTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Most Active Day", stats.MostActiveDayOfWeek.ToString(), currentX, secondRowTop, subtextHex, textHex);
+            currentX += boxWidth;
+            DrawSvgStat(writer, "Most Active Month", stats.MostActiveMonth, currentX, secondRowTop, subtextHex, textHex);
+        }
+
         float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
-        float currentOriginY = Padding + TitleAreaHeight + 60;
+        float currentOriginY = Padding + TitleAreaHeight + statsHeight + 60;
 
         foreach (var year in sortedYears)
         {

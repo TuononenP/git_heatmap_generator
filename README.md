@@ -1,6 +1,6 @@
 # Git Heatmap Generator
 
-A C# .NET console application that generates a Git activity heatmap image (PNG) from a local Git repository.
+A C# .NET console application that generates a Git activity heatmap image from a local Git repository.
 
 ![Git Heatmap Example](example/heatmap_2022-2026_example.png)
 
@@ -19,7 +19,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
   - Three-character month labels (Jan, Feb, Mar...) on the x-axis.
   - Three-character weekday labels (Sun, Mon, Tue...) on the y-axis.
   - Year labels on the left side of each year section.
-  - "Amount of commits" label (or "Amount of commits and pull requests" if the flag is enabled).
+  - "Amount of commits" label (or "Amount of commits and pull requests" if the --pull-requests flag is enabled).
 - Renders a "Less — [Colors] — More" legend at the bottom right.
 
 - Outputs the result as `heatmap_{year}.png` or `heatmap_{startYear}-{endYear}.png`. If no year is specified, every year with commits for the email(s) is included.

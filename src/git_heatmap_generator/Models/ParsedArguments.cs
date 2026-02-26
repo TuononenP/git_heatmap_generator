@@ -22,4 +22,5 @@ public class ParsedArguments
     public bool Use3DStyle { get; set; }
     public bool Use3DChart { get; set; }
     public string? Title { get; set; }
+    public bool HideStats { get; set; }
 }
