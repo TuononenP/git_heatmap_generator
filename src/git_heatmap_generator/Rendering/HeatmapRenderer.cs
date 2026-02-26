@@ -88,28 +88,28 @@ public static class HeatmapRenderer
     }
 
     public static string Generate(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false, bool use3DChart = false)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png, ColorTheme theme = ColorTheme.Default, ColorMode mode = ColorMode.Dark, List<string>? customColors = null, bool use3D = false, bool use3DChart = false, string? customTitle = null)
     {
         var colorScheme = ColorScheme.GetTheme(theme, mode, customColors);
         
         if (use3DChart)
         {
             if (format == OutputFormat.Svg)
-                return Generate3DSvgChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
-            return Generate3DChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme);
+                return Generate3DSvgChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle);
+            return Generate3DChart(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, customTitle);
         }
 
         if (format == OutputFormat.Svg)
-            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D);
+            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs, colorScheme, use3D, customTitle);
 
         if (layout == HeatmapLayout.Vertical)
-            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
+            return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle);
         else
-            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D);
+            return GenerateHorizontal(years, userEmails, commitCounts, outputPathOrFolder, includePrs, colorScheme, use3D, customTitle);
     }
 
     private static string Generate3DChart(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle)
     {
         // Isometric Constants
         const float isoW = 14;
@@ -137,9 +137,9 @@ public static class HeatmapRenderer
             
             if (fontTitle != null)
             {
-                string emailDisplay = string.Join(", ", userEmails);
+                string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
                 string yearDisplay = years.Count == 1 ? years[0].ToString() : $"{years.Min()}-{years.Max()}";
-                image.Mutate(x => x.DrawText(emailDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
+                image.Mutate(x => x.DrawText(titleDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
                 image.Mutate(x => x.DrawText($"{yearDisplay}", fontTitle, colorScheme.SubtextColor, new PointF(Padding, Padding + 35)));
             }
 
@@ -221,7 +221,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateVertical(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
     {
         int yearSectionHeight = MonthLabelHeight + YearGridHeight + YearGap;
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
@@ -235,7 +235,7 @@ public static class HeatmapRenderer
         using (Image<Rgba32> image = new Image<Rgba32>(width, height))
         {
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
-            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D);
+            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D, customTitle);
 
             float gridLeft = Padding + LabelAreaWidth;
             float gridTopBase = Padding + TitleAreaHeight;
@@ -254,7 +254,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateHorizontal(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
     {
         var sortedYears = years.OrderBy(y => y).ToList();
 
@@ -270,7 +270,7 @@ public static class HeatmapRenderer
         using (Image<Rgba32> image = new Image<Rgba32>(width, height))
         {
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
-            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D);
+            DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs, colorScheme, use3D, customTitle);
 
             float gridLeftBase = Padding + LabelAreaWidth;
             float gridTopBase = Padding + horizontalTitleArea;
@@ -388,14 +388,14 @@ public static class HeatmapRenderer
     }
 
     private static void DrawCommonItems(Image<Rgba32> image, List<int> years, List<string> userEmails, 
-        Font? fontTitle, Font? fontLabel, int width, int height, bool includePrs, ColorScheme colorScheme, bool use3D = false)
+        Font? fontTitle, Font? fontLabel, int width, int height, bool includePrs, ColorScheme colorScheme, bool use3D = false, string? customTitle = null)
     {
         if (fontTitle != null)
         {
-            string emailDisplay = string.Join(", ", userEmails);
+            string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
             string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
             
-            image.Mutate(x => x.DrawText(emailDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
+            image.Mutate(x => x.DrawText(titleDisplay, fontTitle, colorScheme.TextColor, new PointF(Padding, Padding)));
             image.Mutate(x => x.DrawText(yearDisplay, fontTitle, colorScheme.SubtextColor, new PointF(Padding, Padding + 35)));
         }
 
@@ -431,7 +431,7 @@ public static class HeatmapRenderer
     }
 
     private static string GenerateSvg(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme, bool use3D)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs, ColorScheme colorScheme, bool use3D, string? customTitle)
     {
         int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
         int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
@@ -468,9 +468,10 @@ public static class HeatmapRenderer
         writer.WriteLine("  </style>");
 
         // Title and Year Range
-        string emailDisplay = System.Net.WebUtility.HtmlEncode(string.Join(", ", userEmails));
+        string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
+        titleDisplay = System.Net.WebUtility.HtmlEncode(titleDisplay);
         string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
-        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{emailDisplay}</text>");
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{titleDisplay}</text>");
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
 
         float gridLeftBase = Padding + LabelAreaWidth;
@@ -601,7 +602,7 @@ public static class HeatmapRenderer
     }
 
     private static string Generate3DSvgChart(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, bool includePrs, ColorScheme colorScheme, string? customTitle)
     {
         // Isometric Constants
         const float isoW = 14;
@@ -633,9 +634,10 @@ public static class HeatmapRenderer
         writer.WriteLine($"    .year-label {{ fill: #{textHex}; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; }}");
         writer.WriteLine("  </style>");
 
-        string emailDisplay = System.Net.WebUtility.HtmlEncode(string.Join(", ", userEmails));
+        string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
+        titleDisplay = System.Net.WebUtility.HtmlEncode(titleDisplay);
         string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
-        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{emailDisplay}</text>");
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{titleDisplay}</text>");
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
 
         float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset

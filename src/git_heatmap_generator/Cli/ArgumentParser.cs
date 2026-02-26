@@ -20,6 +20,7 @@ public static class ArgumentParser
     private static readonly string[] CustomColorsFlags = { "--colors", "-c", "—colors" };
     private static readonly string[] ThreeDFlags = { "--3d" };
     private static readonly string[] ChartFlags = { "--chart" };
+    private static readonly string[] TitleFlags = { "--title", "-t", "—title" };
 
     /// <summary>
     /// Parses command-line arguments into a structured result.
@@ -111,6 +112,10 @@ public static class ArgumentParser
             else if (ChartFlags.Contains(arg))
             {
                 result.Use3DChart = true;
+            }
+            else if (TitleFlags.Contains(arg) && i + 1 < args.Length)
+            {
+                result.Title = args[++i];
             }
             else
             {
@@ -240,6 +245,7 @@ public static class ArgumentParser
         Console.WriteLine("  -c, --colors <hex,...>   Custom colors (4 comma-separated hex codes)");
         Console.WriteLine("  -m, --mode <type>        Mode: dark (default), light");
         Console.WriteLine("  -pr, --pull-requests      Include pull requests in the calculation");
+        Console.WriteLine("  -t, --title <text>       Custom title for the heatmap (replaces email(s))");
         Console.WriteLine("  --3d                     Use 3D style for heatmap cells");
         Console.WriteLine("  --chart                  Use isometric 3D chart style");
         Console.WriteLine("  -h, --help               Show this help message");

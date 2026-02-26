@@ -121,6 +121,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | `-c`, `--colors <hex,...>` | Custom colors (4 comma-separated hex codes) when using `custom` style. |
 | `-m`, `--mode <type>` | Background mode: `dark` (default), `light`. |
 | `-pr`, `--pull-requests` | Include pull requests in the calculation. |
+| `-t`, `--title <text>` | Custom title for the heatmap (replaces email(s)). |
 | `--3d` | Use a 3D elevated style for heatmap cells. |
 | `--chart` | Use an isometric 3D chart style with elevated pillars. |
 | `-h`, `--help` | Show help message. |
@@ -228,6 +229,14 @@ dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome
 ```
 
 This generates an isometric 3D view of the heatmap where each day's contribution is represented by an elevated pillar.
+
+**Custom Title:**
+
+```bash
+dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./my_awesome_project -- --title "My Contributions"
+```
+
+This replaces the email display at the top of the heatmap with "My Contributions".
 
 **Using explicit flags:**
 

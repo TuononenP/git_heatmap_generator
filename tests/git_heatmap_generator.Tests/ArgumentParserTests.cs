@@ -275,8 +275,13 @@ public class ArgumentParserTests
         Assert.Contains("user@mail.com", result.Emails);
         Assert.Contains("/path/to/repo", result.RepositoryPaths);
     }
+
+    [Fact]
+    public void Parse_WithTitleFlag_ReturnsCustomTitle()
+    {
+        string[] args = { "user@mail.com", "/path", "--title", "Custom Heatmap Title" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal("Custom Heatmap Title", result.Title);
+    }
 }
-
-
-
-

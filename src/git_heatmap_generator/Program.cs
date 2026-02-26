@@ -81,13 +81,13 @@ class Program
                     yearOutputPath = Path.Combine(directory ?? "", $"{fileName}_{year}{extension}");
                 }
 
-                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode, parsed.CustomColors, parsed.Use3DStyle, parsed.Use3DChart);
+                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode, parsed.CustomColors, parsed.Use3DStyle, parsed.Use3DChart, parsed.Title);
                 Console.WriteLine($"Heatmap generated for {year}: {path}");
             }
         }
         else
         {
-            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode, parsed.CustomColors, parsed.Use3DStyle, parsed.Use3DChart);
+            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests, parsed.Format, parsed.Theme, parsed.Mode, parsed.CustomColors, parsed.Use3DStyle, parsed.Use3DChart, parsed.Title);
             Console.WriteLine($"Heatmap generated: {outputPath}");
         }
 
