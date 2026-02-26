@@ -2,7 +2,11 @@
 
 A C# .NET console application that generates a Git activity heatmap image from a local Git repository.
 
+Example of a Git activity heatmap using the default vertical layout and default color scheme:  
 ![Git Heatmap Example](example/heatmap_2022-2026_example.png)
+
+Example of a Git activity heatmap using 3D isometric layout with a custom color scheme:  
+![Git Heatmap Example](example/heatmap_3D_isometric_2022-2026_example.png)
 
 ## Features
 
