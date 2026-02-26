@@ -8,7 +8,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 
 - Scans a local Git repository for commits by one or more users (matched by email).
 - Supports a **single year** or a **year range** (e.g., `2022...2026`).
-- Generates a visual Git contribution heatmap graph.
+- Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
   - Multiple years are stacked vertically (newest on top) with year labels.
 - Includes textual metadata on the image:
   - User email and year/range as the title.
@@ -110,7 +110,8 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 | `-r`, `--repo <path>` | Path to the local Git repository. |
 | `-y`, `--year <year\|range>` | Year (e.g., `2025`) or range (e.g., `2022...2026`). Can be used multiple times. |
 | `-e`, `--email <email>` | User email(s) (comma-separated or used multiple times). |
-| `-o`, `--output <path>` | Output folder or full PNG path (e.g., `./out/test.png`). |
+| `-o`, `--output <path>` | Output path or folder (e.g., `./out/test.png` or `./out/test.svg`). |
+| `-f`, `--format <type>` | Output format: `png` (default), `svg`. |
 | `-l`, `--layout <type>` | Layout for multi-year heatmaps: `vertical` (default), `horizontal`, or `separate`. |
 | `-pr`, `--pull-requests` | Include pull requests in the calculation. |
 | `-h`, `--help` | Show help message. |
@@ -130,6 +131,14 @@ dotnet run --project src/git_heatmap_generator 2026 dev@example.com ./my_awesome
 ```
 
 This generates `heatmap_2026.png` with the activity for 2026.
+
+**SVG format:**
+
+```bash
+dotnet run --project src/git_heatmap_generator --format svg 2026 dev@example.com ./my_awesome_project
+```
+
+This generates `heatmap_2026.svg` which is a scalable vector graphic.
 
 **Year range:**
 

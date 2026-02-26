@@ -54,16 +54,18 @@ public static class HeatmapRenderer
     /// <summary>
     /// Generates the default output filename based on the years and layout.
     /// </summary>
-    public static string GetDefaultFileName(List<int> years, HeatmapLayout layout = HeatmapLayout.Vertical)
+    public static string GetDefaultFileName(List<int> years, HeatmapLayout layout = HeatmapLayout.Vertical, OutputFormat format = OutputFormat.Png)
     {
+        string extension = format == OutputFormat.Svg ? "svg" : "png";
+        
         if (layout == HeatmapLayout.Horizontal)
         {
-            return $"heatmap_horizontal_{years.Min()}-{years.Max()}.png";
+            return $"heatmap_horizontal_{years.Min()}-{years.Max()}.{extension}";
         }
         
         return years.Count == 1
-            ? $"heatmap_{years[0]}.png"
-            : $"heatmap_{years.Min()}-{years.Max()}.png";
+            ? $"heatmap_{years[0]}.{extension}"
+            : $"heatmap_{years.Min()}-{years.Max()}.{extension}";
     }
 
     private static (Font? title, Font? label, Font? year) GetFonts()
@@ -88,15 +90,19 @@ public static class HeatmapRenderer
         if (string.IsNullOrWhiteSpace(outputPathOrFolder))
             return Path.Combine(Environment.CurrentDirectory, defaultFileName);
 
-        if (outputPathOrFolder.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        if (outputPathOrFolder.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || 
+            outputPathOrFolder.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
             return outputPathOrFolder;
 
         return Path.Combine(outputPathOrFolder, defaultFileName);
     }
 
     public static string Generate(List<int> years, List<string> userEmails,
-        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false)
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout = HeatmapLayout.Vertical, bool includePrs = false, OutputFormat format = OutputFormat.Png)
     {
+        if (format == OutputFormat.Svg)
+            return GenerateSvg(years, userEmails, commitCounts, outputPathOrFolder, layout, includePrs);
+
         if (layout == HeatmapLayout.Vertical)
             return GenerateVertical(years, userEmails, commitCounts, outputPathOrFolder, includePrs);
         else
@@ -143,9 +149,10 @@ public static class HeatmapRenderer
 
         int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
         int yearGapX = 40;
+        int horizontalTitleArea = TitleAreaHeight + 20; // Extra space for year labels in horizontal layout
 
         int width = Padding + LabelAreaWidth + totalWeeks * Step + (years.Count - 1) * yearGapX + Padding;
-        int height = Padding + TitleAreaHeight + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
+        int height = Padding + horizontalTitleArea + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
 
         var (fontTitle, fontLabel, fontYear) = GetFonts();
 
@@ -155,7 +162,7 @@ public static class HeatmapRenderer
             DrawCommonItems(image, years, userEmails, fontTitle, fontLabel, width, height, includePrs);
 
             float gridLeftBase = Padding + LabelAreaWidth;
-            float gridTopBase = Padding + TitleAreaHeight;
+            float gridTopBase = Padding + horizontalTitleArea;
 
             float currentGridLeft = gridLeftBase;
             for (int yi = 0; yi < sortedYears.Count; yi++)
@@ -187,7 +194,7 @@ public static class HeatmapRenderer
         if (fontYear != null)
         {
             float x = isHorizontal ? gridLeft : Padding;
-            float y = isHorizontal ? sectionTop - 20 : gridTop + 3 * Step;
+            float y = isHorizontal ? sectionTop - 42 : gridTop + 3 * Step;
             image.Mutate(ctx => ctx.DrawText(year.ToString(), fontYear, Color.White, new PointF(x, y)));
             
             if (fontLabel != null)
@@ -277,4 +284,146 @@ public static class HeatmapRenderer
         }
         image.Save(fullPath);
     }
+
+    private static string GenerateSvg(List<int> years, List<string> userEmails,
+        Dictionary<DateTime, int> commitCounts, string outputPathOrFolder, HeatmapLayout layout, bool includePrs)
+    {
+        int maxWeeks = years.Max(y => CalculateWeeksForYear(y));
+        int totalWeeks = years.Sum(y => CalculateWeeksForYear(y));
+        int yearSectionHeight = MonthLabelHeight + YearGridHeight + YearGap;
+        int yearGapX = 40;
+        int horizontalTitleArea = TitleAreaHeight + 20;
+
+        int width, height;
+        if (layout == HeatmapLayout.Horizontal)
+        {
+            width = Padding + LabelAreaWidth + totalWeeks * Step + (years.Count - 1) * yearGapX + Padding;
+            height = Padding + horizontalTitleArea + MonthLabelHeight + YearGridHeight + LegendAreaHeight + Padding;
+        }
+        else
+        {
+            width = Padding + LabelAreaWidth + maxWeeks * Step + Padding;
+            height = Padding + TitleAreaHeight + years.Count * yearSectionHeight - YearGap + LegendAreaHeight + Padding;
+        }
+
+        using var writer = new StringWriter();
+        writer.WriteLine($"<svg width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\" xmlns=\"http://www.w3.org/2000/svg\">");
+        writer.WriteLine("  <rect width=\"100%\" height=\"100%\" fill=\"#0d1117\" />");
+
+        // Common text styles
+        writer.WriteLine("  <style>");
+        writer.WriteLine("    .title { fill: white; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }");
+        writer.WriteLine("    .subtitle { fill: #7d8590; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }");
+        writer.WriteLine("    .label { fill: #7d8590; font-family: Arial, Helvetica, sans-serif; font-size: 12px; }");
+        writer.WriteLine("    .year-label { fill: white; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; }");
+        writer.WriteLine("  </style>");
+
+        // Title and Year Range
+        string emailDisplay = System.Net.WebUtility.HtmlEncode(string.Join(", ", userEmails));
+        string yearDisplay = years.Count == 1 ? (years[0] == 0 ? "All years" : years[0].ToString()) : $"{years.Min()}-{years.Max()}";
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 20}\" class=\"title\">{emailDisplay}</text>");
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
+
+        float gridLeftBase = Padding + LabelAreaWidth;
+        float gridTopBase = layout == HeatmapLayout.Horizontal ? Padding + horizontalTitleArea : Padding + TitleAreaHeight;
+
+        var sortedYears = layout == HeatmapLayout.Horizontal 
+            ? years.OrderBy(y => y).ToList() 
+            : years.OrderByDescending(y => y).ToList();
+
+        float currentGridLeft = gridLeftBase;
+        for (int yi = 0; yi < sortedYears.Count; yi++)
+        {
+            int year = sortedYears[yi];
+            float sectionTop = layout == HeatmapLayout.Horizontal ? gridTopBase : gridTopBase + yi * yearSectionHeight;
+            float gridLeft = layout == HeatmapLayout.Horizontal ? currentGridLeft : gridLeftBase;
+            
+            DrawSvgYear(writer, year, sectionTop, gridLeft, commitCounts, layout == HeatmapLayout.Horizontal, yi == 0);
+            
+            if (layout == HeatmapLayout.Horizontal)
+                currentGridLeft += CalculateWeeksForYear(year) * Step + yearGapX;
+        }
+
+        // Legend
+        float legendY = height - Padding - 20;
+        string labelText = includePrs ? "Amount of commits and pull requests" : "Amount of commits";
+        writer.WriteLine($"  <text x=\"{Padding}\" y=\"{legendY + 12}\" class=\"label\">{labelText}</text>");
+
+        float legendX = width - 240 - Padding;
+        writer.WriteLine($"  <text x=\"{legendX}\" y=\"{legendY + 12}\" class=\"label\">Less</text>");
+        legendX += 40;
+        for (int i = 0; i < 5; i++)
+        {
+            Color c = GetColorForCount(i * 3);
+            var rgba = c.ToPixel<Rgba32>();
+            string hex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
+            writer.WriteLine($"  <rect x=\"{legendX}\" y=\"{legendY}\" width=\"{CellSize}\" height=\"{CellSize}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
+            legendX += Step;
+        }
+        writer.WriteLine($"  <text x=\"{legendX + 5}\" y=\"{legendY + 12}\" class=\"label\">More</text>");
+
+        writer.WriteLine("</svg>");
+
+        string defaultFileName = GetDefaultFileName(years, layout, OutputFormat.Svg);
+        string finalPath = ResolveOutputPath(outputPathOrFolder, defaultFileName);
+        
+        string? dir = Path.GetDirectoryName(finalPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        
+        File.WriteAllText(finalPath, writer.ToString());
+        return finalPath;
+    }
+
+    private static void DrawSvgYear(StringWriter writer, int year, float sectionTop, float gridLeft, 
+        Dictionary<DateTime, int> commitCounts, bool isHorizontal, bool isFirstYearInHorizontal)
+    {
+        float gridTop = sectionTop + MonthLabelHeight;
+        DateTime startDate = new DateTime(year, 1, 1);
+        int startOffset = (int)startDate.DayOfWeek;
+        int totalDays = (new DateTime(year, 12, 31) - startDate).Days + 1;
+        int yearTotal = commitCounts.Where(kv => kv.Key.Year == year).Sum(kv => kv.Value);
+
+        // Year and Total labels
+        float lx = isHorizontal ? gridLeft : Padding;
+        float ly = isHorizontal ? sectionTop - 42 : gridTop + 3 * Step;
+        writer.WriteLine($"  <text x=\"{lx}\" y=\"{ly + 14}\" class=\"year-label\">{year}</text>");
+        writer.WriteLine($"  <text x=\"{lx}\" y=\"{ly + (isHorizontal ? 18 : 20) + 12}\" class=\"label\">{yearTotal} total</text>");
+
+        // Weekday labels
+        if (!isHorizontal || isFirstYearInHorizontal)
+        {
+            string[] days = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+            float dx = Padding + (isHorizontal ? 0 : YearLabelWidth);
+            for (int i = 0; i < 7; i++)
+            {
+                writer.WriteLine($"  <text x=\"{dx}\" y=\"{gridTop + i * Step + 12}\" class=\"label\">{days[i]}</text>");
+            }
+        }
+
+        // Cells and month labels
+        int currentMonth = 0;
+        for (int i = 0; i < totalDays; i++)
+        {
+            DateTime currentDate = startDate.AddDays(i);
+            int weekIndex = (i + startOffset) / 7;
+            int dayOfWeek = (int)currentDate.DayOfWeek;
+
+            if (currentDate.Month != currentMonth)
+            {
+                currentMonth = currentDate.Month;
+                if (currentDate.Day <= 14)
+                {
+                    string monthStr = currentDate.ToString("MMM");
+                    writer.WriteLine($"  <text x=\"{gridLeft + weekIndex * Step}\" y=\"{sectionTop + 12}\" class=\"label\">{monthStr}</text>");
+                }
+            }
+
+            int count = commitCounts.GetValueOrDefault(currentDate, 0);
+            Color c = GetColorForCount(count);
+            var rgba = c.ToPixel<Rgba32>();
+            string hex = $"#{rgba.R:X2}{rgba.G:X2}{rgba.B:X2}";
+            writer.WriteLine($"  <rect x=\"{gridLeft + weekIndex * Step}\" y=\"{gridTop + dayOfWeek * Step}\" width=\"{CellSize}\" height=\"{CellSize}\" fill=\"{hex}\" rx=\"2\" ry=\"2\" />");
+        }
+    }
 }
+

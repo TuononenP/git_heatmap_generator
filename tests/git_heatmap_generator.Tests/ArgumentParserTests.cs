@@ -178,6 +178,35 @@ public class ArgumentParserTests
         Assert.Single(result.Years);
         Assert.Single(result.Emails);
     }
+
+    [Fact]
+    public void Parse_WithFormatFlagSvg_ReturnsOutputFormatSvg()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "--format", "svg" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(OutputFormat.Svg, result.Format);
+    }
+
+    [Fact]
+    public void Parse_WithSvgExtension_InfersOutputFormatSvg()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-o", "result.svg" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(OutputFormat.Svg, result.Format);
+    }
+
+    [Fact]
+    public void Parse_WithPngExtension_InfersOutputFormatPng()
+    {
+        string[] args = { "2025", "user@mail.com", "/path", "-o", "result.png" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(OutputFormat.Png, result.Format);
+    }
 }
+
+
 
 

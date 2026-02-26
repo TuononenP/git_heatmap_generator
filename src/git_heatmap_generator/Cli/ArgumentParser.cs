@@ -14,6 +14,7 @@ public static class ArgumentParser
     private static readonly string[] EmailFlags = { "--email", "-e", "—email" };
     private static readonly string[] RepoFlags = { "--repo", "-r", "—repo" };
     private static readonly string[] PrFlags = { "--pull-requests", "-pr", "—pull-requests" };
+    private static readonly string[] FormatFlags = { "--format", "-f", "—format" };
 
     /// <summary>
     /// Parses command-line arguments into a structured result.
@@ -70,6 +71,11 @@ public static class ArgumentParser
             {
                 result.IncludePullRequests = true;
             }
+            else if (FormatFlags.Contains(arg) && i + 1 < args.Length)
+            {
+                string formatArg = args[++i].ToLower();
+                result.Format = formatArg == "svg" ? OutputFormat.Svg : OutputFormat.Png;
+            }
             else
             {
                 positionalArgs.Add(args[i]);
@@ -112,6 +118,12 @@ public static class ArgumentParser
         // Distinct lists
         result.Years = result.Years.Distinct().OrderBy(y => y).ToList();
         result.Emails = result.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        // Infer format from output path if possible
+        if (result.OutputFolder.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+            result.Format = OutputFormat.Svg;
+        else if (result.OutputFolder.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            result.Format = OutputFormat.Png;
 
         return result;
     }
@@ -177,8 +189,9 @@ public static class ArgumentParser
         Console.WriteLine("  -r, --repo <path>        Path to the local Git repository");
         Console.WriteLine("  -y, --year <year|range>  Year (e.g., 2025) or range (e.g., 2022...2026)");
         Console.WriteLine("  -e, --email <email>      User email (can be comma-separated or used multiple times)");
-        Console.WriteLine("  -o, --output <folder>    Output folder for the generated PNG (default: current directory)");
+        Console.WriteLine("  -o, --output <folder>    Output path or folder for the generated image (default: current directory)");
         Console.WriteLine("  -l, --layout <type>      Layout: vertical (default), horizontal, separate");
+        Console.WriteLine("  -f, --format <type>      Output format: png (default), svg");
         Console.WriteLine("  -pr, --pull-requests      Include pull requests in the calculation");
         Console.WriteLine("  -h, --help               Show this help message");
         Console.WriteLine();

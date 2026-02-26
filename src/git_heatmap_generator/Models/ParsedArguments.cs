@@ -1,6 +1,7 @@
 namespace git_heatmap_generator.Models;
 
 public enum HeatmapLayout { Vertical, Horizontal, Separate }
+public enum OutputFormat { Png, Svg }
 
 /// <summary>
 /// Result of parsing command-line arguments.
@@ -14,5 +15,7 @@ public class ParsedArguments
     public HeatmapLayout Layout { get; set; } = HeatmapLayout.Vertical;
     public bool ShowHelp { get; set; }
     public bool IncludePullRequests { get; set; }
+    public OutputFormat Format { get; set; } = OutputFormat.Png;
 }
+
 

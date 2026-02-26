@@ -55,5 +55,22 @@ public class RendererTests
         var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Horizontal);
         Assert.Equal("heatmap_horizontal_2022-2023.png", fileName);
     }
+
+    [Fact]
+    public void GetDefaultFileName_SvgFormat_ReturnsCorrectExtension()
+    {
+        var years = new List<int> { 2025 };
+        var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Vertical, OutputFormat.Svg);
+        Assert.Equal("heatmap_2025.svg", fileName);
+    }
+
+    [Fact]
+    public void GetDefaultFileName_SvgHorizontal_ReturnsCorrectName()
+    {
+        var years = new List<int> { 2022, 2023 };
+        var fileName = HeatmapRenderer.GetDefaultFileName(years, HeatmapLayout.Horizontal, OutputFormat.Svg);
+        Assert.Equal("heatmap_horizontal_2022-2023.svg", fileName);
+    }
 }
+
 

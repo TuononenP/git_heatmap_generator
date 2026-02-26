@@ -49,21 +49,23 @@ class Program
                 var yearList = new List<int> { year };
                 string yearOutputPath = parsed.OutputFolder;
                 
-                // If the user specified a .png file, we append the year to the filename for separate layout
-                if (yearOutputPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                // If the user specified a file path, we append the year to the filename for separate layout
+                if (yearOutputPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || 
+                    yearOutputPath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
                 {
                     string? directory = Path.GetDirectoryName(yearOutputPath);
                     string fileName = Path.GetFileNameWithoutExtension(yearOutputPath);
-                    yearOutputPath = Path.Combine(directory ?? "", $"{fileName}_{year}.png");
+                    string extension = Path.GetExtension(yearOutputPath);
+                    yearOutputPath = Path.Combine(directory ?? "", $"{fileName}_{year}{extension}");
                 }
 
-                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests);
+                string path = HeatmapRenderer.Generate(yearList, parsed.Emails, commitCounts, yearOutputPath, HeatmapLayout.Vertical, parsed.IncludePullRequests, parsed.Format);
                 Console.WriteLine($"Heatmap generated for {year}: {path}");
             }
         }
         else
         {
-            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests);
+            string outputPath = HeatmapRenderer.Generate(parsed.Years, parsed.Emails, commitCounts, parsed.OutputFolder, parsed.Layout, parsed.IncludePullRequests, parsed.Format);
             Console.WriteLine($"Heatmap generated: {outputPath}");
         }
 
