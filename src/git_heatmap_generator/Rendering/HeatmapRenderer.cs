@@ -124,17 +124,17 @@ public static class HeatmapRenderer
         int gridWidth = (int)(58 * isoW);
         int gridHeight = (int)(58 * isoH);
 
-        int yearStepY = 120; // How much each year adds to total height (vertical overlap for compactness)
+        int yearStepY = 160; // How much each year adds to total height (vertical overlap for compactness)
         int width = gridWidth + Padding * 2 + 120;
-        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 100 + Padding;
+        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
 
         var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
-        var (fontTitle, _, fontYear) = GetFonts();
+        var (fontTitle, fontLabel, fontYear) = GetFonts();
 
         using (Image<Rgba32> image = new Image<Rgba32>(width, height))
         {
             image.Mutate(x => x.Fill(colorScheme.BackgroundColor));
-            
+
             if (fontTitle != null)
             {
                 string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
@@ -144,7 +144,7 @@ public static class HeatmapRenderer
             }
 
             float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
-            float currentOriginY = Padding + TitleAreaHeight + 50;
+            float currentOriginY = Padding + TitleAreaHeight + 60;
 
             foreach (var year in sortedYears)
             {
@@ -157,24 +157,44 @@ public static class HeatmapRenderer
                 int totalDays = (new DateTime(year, 12, 31) - startDate).Days + 1;
                 int startOffset = (int)startDate.DayOfWeek;
 
+                // Track month labels
+                int currentMonth = 0;
+                var monthLabels = new List<(string Text, float X, float Y)>();
+
                 for (int i = 0; i < totalDays; i++)
                 {
                     DateTime currentDate = startDate.AddDays(i);
                     int week = (i + startOffset) / 7;
                     int day = (int)currentDate.DayOfWeek;
 
+                    // Draw month labels for isometric view
+                    if (currentDate.Month != currentMonth && fontLabel != null)
+                    {
+                        currentMonth = currentDate.Month;
+                        string monthStr = currentDate.ToString("MMM");
+                        float monthX = originX + week * isoW;
+                        float monthY = currentOriginY + week * isoH - 35;
+                        monthLabels.Add((monthStr, monthX, monthY));
+                    }
+
                     float cx = originX + (week - day) * isoW;
                     float cy = currentOriginY + (week + day) * isoH;
 
                     int count = commitCounts.GetValueOrDefault(currentDate, 0);
                     Color baseColor = colorScheme.GetColorForCount(count);
-                    
+
                     // Height proportional to count with a cap
                     float barHeight = count == 0 ? 2 : Math.Min(40, count) * barScale / 2.5f + minBarHeight;
 
                     DrawIsometricBar(image, cx, cy, isoW - cellGap, isoH - cellGap, barHeight, baseColor);
                 }
-                
+
+                // Draw month labels after bars to ensure they are on top
+                foreach (var label in monthLabels)
+                {
+                    image.Mutate(x => x.DrawText(label.Text, fontLabel, colorScheme.SubtextColor, new PointF(label.X, label.Y)));
+                }
+
                 currentOriginY += yearStepY;
             }
 
@@ -614,9 +634,9 @@ public static class HeatmapRenderer
         int gridWidth = (int)(58 * isoW);
         int gridHeight = (int)(58 * isoH);
 
-        int yearStepY = 120; // How much each year adds to total height (vertical overlap for compactness)
+        int yearStepY = 160; // How much each year adds to total height (vertical overlap for compactness)
         int width = gridWidth + Padding * 2 + 120;
-        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 100 + Padding;
+        int height = Padding + TitleAreaHeight + (years.Count - 1) * yearStepY + gridHeight + 120 + Padding;
 
         var sortedYears = years.OrderByDescending(y => y).ToList(); // Draw newest first (back-to-front)
         
@@ -627,11 +647,12 @@ public static class HeatmapRenderer
 
         writer.WriteLine($"<svg width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\" xmlns=\"http://www.w3.org/2000/svg\">");
         writer.WriteLine($"  <rect width=\"100%\" height=\"100%\" fill=\"#{bgHex}\" />");
-        
+
         writer.WriteLine("  <style>");
         writer.WriteLine($"    .title {{ fill: #{textHex}; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }}");
         writer.WriteLine($"    .subtitle {{ fill: #{subtextHex}; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; }}");
         writer.WriteLine($"    .year-label {{ fill: #{textHex}; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; }}");
+        writer.WriteLine($"    .label {{ fill: #{subtextHex}; font-family: Arial, Helvetica, sans-serif; font-size: 12px; }}");
         writer.WriteLine("  </style>");
 
         string titleDisplay = !string.IsNullOrWhiteSpace(customTitle) ? customTitle : string.Join(", ", userEmails);
@@ -641,7 +662,7 @@ public static class HeatmapRenderer
         writer.WriteLine($"  <text x=\"{Padding}\" y=\"{Padding + 55}\" class=\"subtitle\">{yearDisplay}</text>");
 
         float originX = Padding + 100 + 6 * isoW; // Correct for min cx offset
-        float currentOriginY = Padding + TitleAreaHeight + 50;
+        float currentOriginY = Padding + TitleAreaHeight + 60;
 
         foreach (var year in sortedYears)
         {
@@ -651,11 +672,25 @@ public static class HeatmapRenderer
             int totalDays = (new DateTime(year, 12, 31) - startDate).Days + 1;
             int startOffset = (int)startDate.DayOfWeek;
 
+            // Track month labels
+            int currentMonth = 0;
+            var monthLabels = new List<(string Text, float X, float Y)>();
+
             for (int i = 0; i < totalDays; i++)
             {
                 DateTime currentDate = startDate.AddDays(i);
                 int week = (i + startOffset) / 7;
                 int day = (int)currentDate.DayOfWeek;
+
+                // Track month labels for isometric view
+                if (currentDate.Month != currentMonth)
+                {
+                    currentMonth = currentDate.Month;
+                    string monthStr = currentDate.ToString("MMM");
+                    float monthX = originX + week * isoW;
+                    float monthY = currentOriginY + week * isoH - 35;
+                    monthLabels.Add((monthStr, monthX, monthY));
+                }
 
                 float cx = originX + (week - day) * isoW;
                 float cy = currentOriginY + (week + day) * isoH;
@@ -666,6 +701,13 @@ public static class HeatmapRenderer
 
                 DrawSvgIsometricBar(writer, cx, cy, isoW - cellGap, isoH - cellGap, barHeight, baseColor);
             }
+
+            // Draw month labels after bars to ensure they are on top
+            foreach (var label in monthLabels)
+            {
+                writer.WriteLine($"  <text x=\"{label.X}\" y=\"{label.Y + 12}\" class=\"label\">{label.Text}</text>");
+            }
+
             currentOriginY += yearStepY;
         }
 
