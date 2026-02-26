@@ -8,18 +8,29 @@ namespace git_heatmap_generator.Git;
 public static class CommitScanner
 {
     /// <summary>
-    /// Scans the repository at the given path and returns daily commit counts
+    /// Scans the repositories at the given paths and returns aggregated daily commit counts
     /// for the specified years and email addresses.
-    /// This scans ALL branches and tags (equivalent to git log --all).
+    /// This scans ALL branches and tags in each repository.
     /// </summary>
-    public static Dictionary<DateTime, int> Scan(string repoPath, List<string> emails, List<int> years, bool includePrs = false)
+    public static Dictionary<DateTime, int> Scan(List<string> repoPaths, List<string> emails, List<int> years, bool includePrs = false)
+    {
+        var totalCounts = new Dictionary<DateTime, int>();
+
+        foreach (var repoPath in repoPaths)
+        {
+            var repoCounts = ScanSingle(repoPath, emails, years, includePrs);
+            totalCounts = MergeCounts(totalCounts, repoCounts);
+        }
+
+        return totalCounts;
+    }
+
+    private static Dictionary<DateTime, int> ScanSingle(string repoPath, List<string> emails, List<int> years, bool includePrs)
     {
         var commitCounts = new Dictionary<DateTime, int>();
 
         using (var repo = new Repository(repoPath))
         {
-            // Use CommitFilter to include all references (branches, tags, remotes)
-            // This is equivalent to git's --all flag.
             var filter = new CommitFilter 
             { 
                 IncludeReachableFrom = repo.Refs,
@@ -28,8 +39,6 @@ public static class CommitScanner
 
             foreach (var commit in repo.Commits.QueryBy(filter))
             {
-                // By default, we exclude merge commits (which often represent PR merges)
-                // unless the user specifically asks to include them.
                 if (!includePrs && commit.Parents.Count() > 1)
                     continue;
 

@@ -65,7 +65,8 @@ public static class ArgumentParser
             }
             else if (RepoFlags.Contains(arg) && i + 1 < args.Length)
             {
-                result.RepositoryPath = args[++i];
+                var parsedRepos = ParseList(args[++i]);
+                result.RepositoryPaths.AddRange(parsedRepos);
             }
             else if (PrFlags.Contains(arg))
             {
@@ -103,14 +104,14 @@ public static class ArgumentParser
             posIndex++;
         }
 
-        if (string.IsNullOrEmpty(result.RepositoryPath) && posIndex < positionalArgs.Count)
+        while (posIndex < positionalArgs.Count)
         {
-            result.RepositoryPath = positionalArgs[posIndex];
+            result.RepositoryPaths.AddRange(ParseList(positionalArgs[posIndex]));
             posIndex++;
         }
 
         // Validation
-        if (result.Years.Count == 0 || result.Emails.Count == 0 || string.IsNullOrEmpty(result.RepositoryPath))
+        if (result.Years.Count == 0 || result.Emails.Count == 0 || result.RepositoryPaths.Count == 0)
         {
             return null;
         }
@@ -118,6 +119,7 @@ public static class ArgumentParser
         // Distinct lists
         result.Years = result.Years.Distinct().OrderBy(y => y).ToList();
         result.Emails = result.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        result.RepositoryPaths = result.RepositoryPaths.Distinct().ToList();
 
         // Infer format from output path if possible
         if (result.OutputFolder.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
@@ -169,9 +171,9 @@ public static class ArgumentParser
     }
 
     /// <summary>
-    /// Parses a comma-separated email string into a list of emails.
+    /// Parses a comma-separated string into a list of trimmed strings.
     /// </summary>
-    public static List<string> ParseEmails(string input)
+    public static List<string> ParseList(string input)
     {
         return input
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -179,14 +181,19 @@ public static class ArgumentParser
     }
 
     /// <summary>
+    /// Alias for ParseList to maintain compatibility if needed, though ParseList is more generic.
+    /// </summary>
+    public static List<string> ParseEmails(string input) => ParseList(input);
+
+    /// <summary>
     /// Prints usage information to the console.
     /// </summary>
     public static void PrintUsage()
     {
-        Console.WriteLine("Usage: git_heatmap_generator [options] [year] [email] [repository_path]");
+        Console.WriteLine("Usage: git_heatmap_generator [options] [year] [email] [repo_path1] [repo_path2] ...");
         Console.WriteLine();
         Console.WriteLine("Options:");
-        Console.WriteLine("  -r, --repo <path>        Path to the local Git repository");
+        Console.WriteLine("  -r, --repo <path>        Path to the local Git repository (comma-separated or multiple times)");
         Console.WriteLine("  -y, --year <year|range>  Year (e.g., 2025) or range (e.g., 2022...2026)");
         Console.WriteLine("  -e, --email <email>      User email (can be comma-separated or used multiple times)");
         Console.WriteLine("  -o, --output <folder>    Output path or folder for the generated image (default: current directory)");
@@ -197,7 +204,7 @@ public static class ArgumentParser
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  git_heatmap_generator 2025 user@example.com /path/to/repo");
-        Console.WriteLine("  git_heatmap_generator -r /path/to/repo -y 2022...2026 -e user@example.com");
-        Console.WriteLine("  git_heatmap_generator -y 2024 -y 2025 -e dev1@mail.com -e dev2@mail.com /path/to/repo");
+        Console.WriteLine("  git_heatmap_generator -r ./repo1,./repo2 -y 2022...2026 -e user@example.com");
+        Console.WriteLine("  git_heatmap_generator -y 2025 -e dev@mail.com ./repo1 ./repo2 ./repo3");
     }
 }

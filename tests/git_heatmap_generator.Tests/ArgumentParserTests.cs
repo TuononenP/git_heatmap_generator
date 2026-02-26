@@ -33,7 +33,7 @@ public class ArgumentParserTests
         Assert.NotNull(result);
         Assert.Contains(2025, result.Years);
         Assert.Contains("user@example.com", result.Emails);
-        Assert.Equal("/path/to/repo", result.RepositoryPath);
+        Assert.Contains("/path/to/repo", result.RepositoryPaths);
         Assert.Equal(HeatmapLayout.Vertical, result.Layout);
     }
 
@@ -54,7 +54,7 @@ public class ArgumentParserTests
         Assert.NotNull(result);
         Assert.Contains(2024, result.Years);
         Assert.Contains("test@mail.com", result.Emails);
-        Assert.Equal("/path", result.RepositoryPath);
+        Assert.Contains("/path", result.RepositoryPaths);
     }
 
     [Fact]
@@ -77,9 +77,21 @@ public class ArgumentParserTests
         string[] args = { "--repo", "/custom/path", "2025", "user@mail.com" };
         var result = ArgumentParser.Parse(args);
         Assert.NotNull(result);
-        Assert.Equal("/custom/path", result.RepositoryPath);
+        Assert.Contains("/custom/path", result.RepositoryPaths);
         Assert.Contains(2025, result.Years);
         Assert.Contains("user@mail.com", result.Emails);
+    }
+
+    [Fact]
+    public void Parse_WithMultipleRepos_AggregatesRepos()
+    {
+        string[] args = { "2025", "user@mail.com", "/repo1", "/repo2", "-r", "/repo3" };
+        var result = ArgumentParser.Parse(args);
+        Assert.NotNull(result);
+        Assert.Equal(3, result.RepositoryPaths.Count);
+        Assert.Contains("/repo1", result.RepositoryPaths);
+        Assert.Contains("/repo2", result.RepositoryPaths);
+        Assert.Contains("/repo3", result.RepositoryPaths);
     }
 
     [Fact]
@@ -117,7 +129,7 @@ public class ArgumentParserTests
         Assert.NotNull(result);
         Assert.Contains(2025, result.Years);
         Assert.Contains("user@mail.com", result.Emails);
-        Assert.Equal("/path", result.RepositoryPath);
+        Assert.Contains("/path", result.RepositoryPaths);
     }
 
     [Fact]

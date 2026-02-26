@@ -6,7 +6,7 @@ A C# .NET console application that generates a Git activity heatmap image (PNG) 
 
 ## Features
 
-- Scans a local Git repository for commits by one or more users (matched by email).
+- Scans one or **multiple local Git repositories** and aggregates the activity.
 - Supports a **single year** or a **year range** (e.g., `2022...2026`).
 - Generates a visual Git contribution heatmap graph as **PNG** or **SVG**.
   - Multiple years are stacked vertically (newest on top) with year labels.
@@ -120,7 +120,7 @@ dotnet run --project src/git_heatmap_generator [options] -- [year] [email] <repo
 
 1. **`year`**: A single four-digit year (e.g., `2024`) or a year range using `...` (e.g., `2022...2026`).
 2. **`email`**: One or more email addresses, comma-separated (e.g., `dev@example.com` or `dev@example.com,alt@example.com`). Commits matching any of the emails are combined.
-3. **`repository_path`**: The local file path to the Git repository (the directory containing the `.git` folder).
+3. **`repository_path`**: One or more local file paths to Git repositories. You can provide multiple paths as separate arguments or comma-separated.
 
 ### Examples
 
@@ -147,6 +147,14 @@ dotnet run --project src/git_heatmap_generator 2022...2026 dev@example.com ./my_
 ```
 
 This generates `heatmap_2022-2026.png` with each year stacked vertically (newest on top).
+
+**Multiple repositories:**
+
+```bash
+dotnet run --project src/git_heatmap_generator 2025 dev@example.com ./project1 ./project2 ./project3
+```
+
+This aggregates activity from all three repositories into a single heatmap.
 
 **Horizontal layout:**
 
@@ -207,5 +215,5 @@ dotnet test
 ## Troubleshooting
 
 - **"Invalid year or year range."**: Use a single year (e.g., `2025`) or a range with three dots (e.g., `2022...2026`).
-- **"Invalid repository path."**: Ensure the given path points to a valid Git repository containing a `.git` folder.
+- **"Invalid repository path: [path]"**: Ensure each provided path points to a valid Git repository containing a `.git` folder.
 - **"Warning: No system fonts found."**: The application requires basic system fonts (like Arial or Helvetica) installed to render the text. If missing, the heatmap will generate without text labels.

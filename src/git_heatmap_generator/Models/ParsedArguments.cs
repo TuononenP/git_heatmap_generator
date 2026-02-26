@@ -10,7 +10,7 @@ public class ParsedArguments
 {
     public List<int> Years { get; set; } = new();
     public List<string> Emails { get; set; } = new();
-    public string RepositoryPath { get; set; } = string.Empty;
+    public List<string> RepositoryPaths { get; set; } = new();
     public string OutputFolder { get; set; } = ".";
     public HeatmapLayout Layout { get; set; } = HeatmapLayout.Vertical;
     public bool ShowHelp { get; set; }

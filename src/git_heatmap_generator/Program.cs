@@ -24,21 +24,27 @@ class Program
             return;
         }
 
-        if (!Repository.IsValid(parsed.RepositoryPath))
+        foreach (var repoPath in parsed.RepositoryPaths)
         {
-            Console.WriteLine("Invalid repository path.");
-            return;
+            if (!Repository.IsValid(repoPath))
+            {
+                Console.WriteLine($"Invalid repository path: {repoPath}");
+                return;
+            }
         }
 
         string yearDisplay = parsed.Years.Count == 1
             ? parsed.Years[0].ToString()
             : $"{parsed.Years.Min()}-{parsed.Years.Max()}";
         string emailDisplay = string.Join(", ", parsed.Emails);
-        Console.WriteLine($"Scanning repository {parsed.RepositoryPath} for {emailDisplay} in {yearDisplay}...");
+        string repoDisplay = string.Join(", ", parsed.RepositoryPaths);
+        
+        Console.WriteLine($"Scanning repositories: {repoDisplay}");
+        Console.WriteLine($"Looking for {emailDisplay} in {yearDisplay}...");
         Console.WriteLine($"Layout: {parsed.Layout}");
         if (parsed.IncludePullRequests) Console.WriteLine("Including pull requests (merge commits).");
 
-        var commitCounts = CommitScanner.Scan(parsed.RepositoryPath, parsed.Emails, parsed.Years, parsed.IncludePullRequests);
+        var commitCounts = CommitScanner.Scan(parsed.RepositoryPaths, parsed.Emails, parsed.Years, parsed.IncludePullRequests);
 
         Console.WriteLine($"Found activity on {commitCounts.Count} different days.");
 
