@@ -16,6 +16,9 @@ Thumbs.db
 
 # Generated heatmap images
 heatmap_*.png
+heatmap_*.svg
+!example/heatmap_*.png
+!example/heatmap_*.svg
 
 # Test repos
 test_repo/
